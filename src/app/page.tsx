@@ -37,7 +37,7 @@ export default function LandingPage() {
         </p>
 
         <button
-          onClick={() => router.push('/map')}
+          onClick={() => router.push('/home')}
           className="group relative px-10 py-5 rounded-xl border border-neon-blue/30 bg-neon-blue/[0.08] text-neon-blue font-heading font-semibold text-sm tracking-[0.2em] uppercase cursor-pointer transition-all hover:border-neon-blue/60 hover:bg-neon-blue/15 hover:shadow-[0_0_40px_rgba(59,130,246,0.25)]"
         >
           View Global Map
@@ -130,7 +130,7 @@ export default function LandingPage() {
           Stop reacting.<br className="md:hidden" /> <span className="text-gradient">Start predicting.</span>
         </h2>
         <button
-          onClick={() => router.push('/map')}
+          onClick={() => router.push('/home')}
           className="group relative px-10 py-5 rounded-xl border border-neon-cyan/30 bg-neon-cyan/[0.08] text-neon-cyan font-heading font-semibold text-sm tracking-[0.2em] uppercase cursor-pointer transition-all hover:border-neon-cyan/60 hover:bg-neon-cyan/15 hover:shadow-[0_0_40px_rgba(0,240,255,0.25)]"
         >
           Open Global Map →
