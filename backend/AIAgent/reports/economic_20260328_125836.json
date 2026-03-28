@@ -1,0 +1,56 @@
+{
+  "run_id": "20260328_125836",
+  "timestamp": "2026-03-28T12:58:36.483840+00:00",
+  "routes": [
+    {
+      "route_id": "safe_route",
+      "base_cost": 14000,
+      "adjusted_cost": 21000.0,
+      "economic_factors": {
+        "oil": 1.21,
+        "demand": 1.56,
+        "currency": 1.1
+      }
+    },
+    {
+      "route_id": "cost_optimal",
+      "base_cost": 14000,
+      "adjusted_cost": 21000.0,
+      "economic_factors": {
+        "oil": 1.21,
+        "demand": 1.56,
+        "currency": 1.1
+      }
+    },
+    {
+      "route_id": "balanced_route",
+      "base_cost": 14000,
+      "adjusted_cost": 21000.0,
+      "economic_factors": {
+        "oil": 1.21,
+        "demand": 1.56,
+        "currency": 1.1
+      }
+    }
+  ],
+  "economic_summary": {
+    "oil_impact_percent": 21.43,
+    "demand_impact_percent": 55.9,
+    "total_cost_increase_percent": 100.0
+  },
+  "recommended_route": {
+    "route_id": "safe_route",
+    "base_cost": 14000,
+    "adjusted_cost": 21000.0,
+    "economic_factors": {
+      "oil": 1.21,
+      "demand": 1.56,
+      "currency": 1.1
+    }
+  },
+  "factors_explained": {
+    "oil": "Fuel surcharge multiplier based on current crude oil price index",
+    "demand": "Freight rate inflator driven by demand-supply imbalance from demand agent",
+    "currency": "USD/EUR exchange rate adjustment on invoiced cost"
+  }
+}
