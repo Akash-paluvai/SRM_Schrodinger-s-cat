@@ -1,49 +1,70 @@
 'use client';
 
-import { memo, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
-import { MetricCard, SectionLabel, StatusBadge } from '@/components/ui';
+import { MetricCard, StatusBadge } from '@/components/ui';
 import { useAppStore } from '@/lib/store';
 
 /* ═══════════════════════════════════════════════════════
-   TYPES
+   DYNAMIC IMPORTS (no SSR for Leaflet)
+   ═══════════════════════════════════════════════════════ */
+const OldLeafletMap = dynamic(() => import('../../components/LeafletMap') as any, { ssr: false }) as any;
+const EnhancedMap = dynamic(() => import('../../components/EnhancedMap') as any, { ssr: false }) as any;
+
+/* ═══════════════════════════════════════════════════════
+   TYPES (Enhanced)
    ═══════════════════════════════════════════════════════ */
 interface Waypoint { lat: number; lng: number; name: string }
-interface Segment { from: string; to: string; coords: [number, number][] }
-interface RouteOption {
+interface RouteSegment {
+  from: string; to: string; mode: string;
+  coords: [number, number][]; distance: number; duration: number;
+}
+interface EnhancedRouteOption {
   id: string; label: string; type: string;
-  waypoints: Waypoint[]; distance: string; time: string;
-  cost: string; riskScore: number; riskLevel: string;
-  reasoning: string; segments: Segment[];
+  waypoints: Waypoint[]; segments: RouteSegment[];
+  distance: string; distanceKm: number;
+  time: string; timeHours: number;
+  cost: string; costValue: number;
+  riskScore: number; riskLevel: string;
+  reasoning: string; riskFactors: string[];
 }
 interface RiskZone {
   lat: number; lng: number; radius: number;
   risk: string; label: string; cause: string;
 }
-interface MapApiData {
+interface EnhancedMapData {
   source: Waypoint; destination: Waypoint;
-  stops: Waypoint[];
-  routes: { fastest: RouteOption; cheapest: RouteOption; safest: RouteOption };
+  stops: Waypoint[]; transportMode: string;
+  routes: { fastest: EnhancedRouteOption; cheapest: EnhancedRouteOption; safest: EnhancedRouteOption };
+  riskZones: RiskZone[];
+  summary: { totalRoutes: number; activeShipments: number; highRiskCount: number; avgDelay: string };
+}
+
+/* ── Old map types ── */
+interface OldRouteOption {
+  id: string; label: string; type: string;
+  waypoints: Waypoint[]; distance: string; time: string;
+  cost: string; riskScore: number; riskLevel: string;
+  reasoning: string; segments: { from: string; to: string; coords: [number, number][] }[];
+}
+interface OldMapData {
+  source: Waypoint; destination: Waypoint; stops: Waypoint[];
+  routes: { fastest: OldRouteOption; cheapest: OldRouteOption; safest: OldRouteOption };
   riskZones: RiskZone[];
   summary: { totalRoutes: number; activeShipments: number; highRiskCount: number; avgDelay: string };
 }
 
 /* ═══════════════════════════════════════════════════════
-   LEAFLET MAP COMPONENT (dynamic - no SSR)
-   ═══════════════════════════════════════════════════════ */
-const LeafletMap = dynamic(() => import('@/components/LeafletMap'), { ssr: false });
-
-/* ═══════════════════════════════════════════════════════
    ROUTE TYPE CONFIG
    ═══════════════════════════════════════════════════════ */
 const ROUTE_TYPES = [
-  { key: 'fastest', label: '⚡ Fastest', color: '#00F0FF' },
-  { key: 'cheapest', label: '💰 Cheapest', color: '#22C55E' },
-  { key: 'safest', label: '🛡️ Safest', color: '#A78BFA' },
-] as const;
+  { key: 'fastest' as const, label: '⚡ Fastest', color: '#00F0FF' },
+  { key: 'cheapest' as const, label: '💰 Cheapest', color: '#22C55E' },
+  { key: 'safest' as const, label: '🛡️ Safest', color: '#A78BFA' },
+];
 
 /* ═══════════════════════════════════════════════════════
    MAIN PAGE
@@ -51,14 +72,39 @@ const ROUTE_TYPES = [
 export default function MapPage() {
   const router = useRouter();
   const shipment = useAppStore((s) => s.shipment);
-  const [data, setData] = useState<MapApiData | null>(null);
+
+  /* ── Map mode toggle ── */
+  const [mapMode, setMapMode] = useState<'enhanced' | 'old'>('enhanced');
+
+  /* ── Enhanced map state ── */
+  const [enhancedData, setEnhancedData] = useState<EnhancedMapData | null>(null);
   const [activeRoute, setActiveRoute] = useState<'fastest' | 'cheapest' | 'safest'>('fastest');
   const [showRiskZones, setShowRiskZones] = useState(true);
   const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
   const [aiMode, setAiMode] = useState(false);
 
-  /* ── Fetch map data (integrated with /home shipment) ── */
+  /* ── Old map state ── */
+  const [oldData, setOldData] = useState<OldMapData | null>(null);
+
+  /* ── Fetch enhanced map data ── */
   useEffect(() => {
+    const params = new URLSearchParams();
+    if (shipment) {
+      params.set('source', shipment.source || 'Mumbai');
+      params.set('destination', shipment.destination || 'Dubai');
+      params.set('mode', shipment.transportMode || 'sea');
+      if (shipment.stops.length > 0) {
+        params.set('stops', shipment.stops.map((s) => s.location).filter(Boolean).join(','));
+      }
+    }
+    fetch(`/api/enhanced-map-data?${params.toString()}`)
+      .then((r) => r.json())
+      .then(setEnhancedData);
+  }, [shipment]);
+
+  /* ── Fetch old map data (lazy) ── */
+  useEffect(() => {
+    if (mapMode !== 'old' || oldData) return;
     const params = new URLSearchParams();
     if (shipment) {
       params.set('source', shipment.source || 'Shanghai');
@@ -69,23 +115,25 @@ export default function MapPage() {
     }
     fetch(`/api/map-data?${params.toString()}`)
       .then((r) => r.json())
-      .then(setData);
-  }, [shipment]);
+      .then(setOldData);
+  }, [mapMode, oldData, shipment]);
 
   /* ── AI auto-select ── */
   useEffect(() => {
-    if (aiMode && data) {
-      const routes = data.routes;
-      let best: 'fastest' | 'cheapest' | 'safest' = 'fastest';
-      if (routes.safest.riskScore < 20) best = 'safest';
-      else if (routes.cheapest.riskScore < 40) best = 'cheapest';
-      setActiveRoute(best);
+    if (aiMode && enhancedData) {
+      const r = enhancedData.routes;
+      if (r.safest.riskScore < 15) setActiveRoute('safest');
+      else if (r.cheapest.riskScore < 35) setActiveRoute('cheapest');
+      else setActiveRoute('fastest');
     }
-  }, [aiMode, data]);
+  }, [aiMode, enhancedData]);
 
-  const currentRoute = data?.routes[activeRoute] || null;
+  const currentEnhancedRoute = enhancedData?.routes[activeRoute] || null;
+  const currentOldRoute = oldData?.routes[activeRoute] || null;
+  const isEnhanced = mapMode === 'enhanced';
+  const data = isEnhanced ? enhancedData : oldData;
 
-  if (!data) {
+  if (!data && isEnhanced && !enhancedData) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-14 pb-14">
         <div className="text-text-muted text-sm font-mono animate-pulse">Initializing global map...</div>
@@ -97,17 +145,57 @@ export default function MapPage() {
     <main className="min-h-screen pt-14 pb-14 relative">
       <div className="w-full h-[calc(100vh-112px)] relative overflow-hidden">
 
-        {/* ── LEAFLET MAP ── */}
-        <LeafletMap
-          source={data.source}
-          destination={data.destination}
-          stops={data.stops}
-          currentRoute={currentRoute}
-          allRoutes={data.routes}
-          activeRouteType={activeRoute}
-          riskZones={showRiskZones ? data.riskZones : []}
-          onZoneClick={setSelectedZone}
-        />
+        {/* ── MAP RENDERING ── */}
+        {isEnhanced && enhancedData ? (
+          <EnhancedMap
+            source={enhancedData.source}
+            destination={enhancedData.destination}
+            stops={enhancedData.stops}
+            currentRoute={currentEnhancedRoute}
+            allRoutes={enhancedData.routes}
+            activeRouteType={activeRoute}
+            riskZones={showRiskZones ? enhancedData.riskZones : []}
+            onZoneClick={setSelectedZone}
+          />
+        ) : oldData ? (
+          <OldLeafletMap
+            source={oldData.source}
+            destination={oldData.destination}
+            stops={oldData.stops}
+            currentRoute={currentOldRoute}
+            allRoutes={oldData.routes}
+            activeRouteType={activeRoute}
+            riskZones={showRiskZones ? oldData.riskZones : []}
+            onZoneClick={setSelectedZone}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-text-muted text-sm font-mono animate-pulse">Loading map...</div>
+          </div>
+        )}
+
+        {/* ── MAP MODE TOGGLE (top-center) ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000]"
+        >
+          <div className="glass flex rounded-lg overflow-hidden">
+            {(['enhanced', 'old'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setMapMode(mode)}
+                className={`px-4 py-2 text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                  mapMode === mode
+                    ? 'bg-neon-blue/15 text-neon-blue'
+                    : 'text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                {mode === 'enhanced' ? '🗺️ Enhanced Map' : '📍 Classic Map'}
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
         {/* ── ROUTE SELECTOR (top-left) ── */}
         <motion.div
@@ -119,7 +207,8 @@ export default function MapPage() {
             <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-3">Route Options</div>
             <div className="space-y-1.5">
               {ROUTE_TYPES.map((rt) => {
-                const route = data.routes[rt.key];
+                const route = isEnhanced ? enhancedData?.routes[rt.key] : oldData?.routes[rt.key];
+                if (!route) return null;
                 return (
                   <button
                     key={rt.key}
@@ -131,7 +220,7 @@ export default function MapPage() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: rt.color }} />
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: rt.color }} />
                       <span className="text-xs font-medium text-text-primary">{rt.label}</span>
                     </div>
                     <span className="text-[10px] font-mono text-text-muted">{route.time}</span>
@@ -142,24 +231,24 @@ export default function MapPage() {
 
             {/* Controls */}
             <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-              <label className="flex items-center justify-between cursor-pointer group">
+              <div className="flex items-center justify-between">
                 <span className="text-[10px] text-text-muted uppercase tracking-wider">Risk Overlay</span>
                 <button
                   onClick={() => setShowRiskZones(!showRiskZones)}
-                  className={`w-8 h-4 rounded-full transition-all ${showRiskZones ? 'bg-neon-blue/40' : 'bg-white/10'}`}
+                  className={`w-8 h-4 rounded-full transition-all cursor-pointer ${showRiskZones ? 'bg-neon-blue/40' : 'bg-white/10'}`}
                 >
                   <div className={`w-3 h-3 rounded-full bg-white transition-transform ${showRiskZones ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
                 </button>
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-[10px] text-text-muted uppercase tracking-wider">AI Auto-Select</span>
                 <button
                   onClick={() => setAiMode(!aiMode)}
-                  className={`w-8 h-4 rounded-full transition-all ${aiMode ? 'bg-risk-low/40' : 'bg-white/10'}`}
+                  className={`w-8 h-4 rounded-full transition-all cursor-pointer ${aiMode ? 'bg-risk-low/40' : 'bg-white/10'}`}
                 >
                   <div className={`w-3 h-3 rounded-full bg-white transition-transform ${aiMode ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
                 </button>
-              </label>
+              </div>
             </div>
 
             {aiMode && (
@@ -167,74 +256,115 @@ export default function MapPage() {
                 <div className="text-[9px] text-risk-low font-mono">AI SELECTED: {activeRoute.toUpperCase()}</div>
               </div>
             )}
+
+            {/* Transport mode indicator (enhanced only) */}
+            {isEnhanced && enhancedData && (
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Transport Modes</div>
+                <div className="flex gap-3">
+                  {['🛣️ Road', '🚢 Sea', '✈️ Air'].map((m) => (
+                    <span key={m} className="text-[9px] text-text-secondary">{m}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </GlassPanel>
         </motion.div>
 
         {/* ── ROUTE DETAIL PANEL (right side) ── */}
-        {currentRoute && (
+        {(isEnhanced ? currentEnhancedRoute : currentOldRoute) && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="absolute top-4 right-4 z-[1000] w-72"
           >
             <GlassPanel className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] uppercase tracking-widest text-text-muted font-semibold">Route Summary</span>
-                <StatusBadge level={currentRoute.riskLevel === 'HIGH' ? 'high' : currentRoute.riskLevel === 'MEDIUM' ? 'medium' : 'low'} />
-              </div>
+              {(() => {
+                const route = isEnhanced ? currentEnhancedRoute! : currentOldRoute!;
+                const src = isEnhanced ? enhancedData!.source : oldData!.source;
+                const dst = isEnhanced ? enhancedData!.destination : oldData!.destination;
+                const stp = isEnhanced ? enhancedData!.stops : oldData!.stops;
 
-              <div className="text-sm font-heading font-bold text-text-primary mb-1">{currentRoute.label}</div>
-              <div className="text-[10px] text-text-muted mb-3">
-                {data.source.name} → {data.stops.map((s) => s.name).join(' → ')}{data.stops.length > 0 ? ' → ' : ''}{data.destination.name}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <MetricCard label="Distance" value={currentRoute.distance} color="text-neon-cyan" />
-                <MetricCard label="Time" value={currentRoute.time} color="text-neon-blue" />
-                <MetricCard label="Cost" value={currentRoute.cost} color="text-risk-low" />
-                <MetricCard label="Risk" value={`${currentRoute.riskScore}/100`} color={currentRoute.riskScore > 60 ? 'text-risk-high' : currentRoute.riskScore > 30 ? 'text-risk-medium' : 'text-risk-low'} />
-              </div>
-
-              <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">AI Reasoning</div>
-                <p className="text-xs text-text-secondary leading-relaxed">{currentRoute.reasoning}</p>
-              </div>
-
-              {/* Segments */}
-              <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Route Segments</div>
-                <div className="space-y-1">
-                  {currentRoute.segments.map((seg, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <div className="w-1 h-1 rounded-full bg-neon-cyan" />
-                      <span className="text-text-secondary">{seg.from} → {seg.to}</span>
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] uppercase tracking-widest text-text-muted font-semibold">Route Summary</span>
+                      <StatusBadge level={route.riskLevel === 'HIGH' ? 'high' : route.riskLevel === 'MEDIUM' ? 'medium' : 'low'} />
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* System integration buttons */}
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { label: 'Intelligence', route: '/intelligence' },
-                  { label: 'Simulation', route: '/simulation' },
-                  { label: 'Explain', route: '/explainability' },
-                  { label: 'Graph', route: '/graph' },
-                ].map((btn) => (
-                  <button
-                    key={btn.route}
-                    onClick={() => router.push(btn.route)}
-                    className="px-2 py-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-[10px] text-text-muted hover:text-neon-blue hover:border-neon-blue/20 transition-all cursor-pointer text-center"
-                  >
-                    {btn.label} →
-                  </button>
-                ))}
-              </div>
+                    <div className="text-sm font-heading font-bold text-text-primary mb-1">{route.label}</div>
+                    <div className="text-[10px] text-text-muted mb-3">
+                      {src.name} → {stp.map((s) => s.name).join(' → ')}{stp.length > 0 ? ' → ' : ''}{dst.name}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <MetricCard label="Distance" value={route.distance} color="text-neon-cyan" />
+                      <MetricCard label="Time" value={route.time} color="text-neon-blue" />
+                      <MetricCard label="Cost" value={route.cost} color="text-risk-low" />
+                      <MetricCard label="Risk" value={`${route.riskScore}/100`} color={route.riskScore > 60 ? 'text-risk-high' : route.riskScore > 30 ? 'text-risk-medium' : 'text-risk-low'} />
+                    </div>
+
+                    {/* Transport breakdown (enhanced only) */}
+                    {isEnhanced && currentEnhancedRoute?.segments && (
+                      <div className="mb-3">
+                        <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Segments</div>
+                        <div className="space-y-1">
+                          {currentEnhancedRoute.segments.map((seg, i) => (
+                            <div key={i} className="flex items-center justify-between text-[10px] px-2 py-1.5 rounded bg-white/[0.02] border border-white/[0.04]">
+                              <div className="flex items-center gap-1.5">
+                                <span>{seg.mode === 'road' ? '🛣️' : seg.mode === 'air' ? '✈️' : '🚢'}</span>
+                                <span className="text-text-secondary">{seg.from} → {seg.to}</span>
+                              </div>
+                              <span className="text-text-muted font-mono">{Math.round(seg.distance)} km</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-3">
+                      <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">AI Reasoning</div>
+                      <p className="text-xs text-text-secondary leading-relaxed">{route.reasoning}</p>
+                    </div>
+
+                    {/* Risk factors (enhanced only) */}
+                    {isEnhanced && currentEnhancedRoute?.riskFactors && currentEnhancedRoute.riskFactors.length > 0 && (
+                      <div className="mb-3">
+                        <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">Risk Factors</div>
+                        {currentEnhancedRoute.riskFactors.map((f, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[10px] text-risk-medium">
+                            <span className="w-1 h-1 rounded-full bg-risk-medium" />
+                            {f}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* System integration */}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { label: 'Intelligence', route: '/intelligence' },
+                        { label: 'Simulation', route: '/simulation' },
+                        { label: 'Explain', route: '/explainability' },
+                        { label: 'Graph', route: '/graph' },
+                      ].map((btn) => (
+                        <button
+                          key={btn.route}
+                          onClick={() => router.push(btn.route)}
+                          className="px-2 py-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-[10px] text-text-muted hover:text-neon-blue hover:border-neon-blue/20 transition-all cursor-pointer text-center"
+                        >
+                          {btn.label} →
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </GlassPanel>
           </motion.div>
         )}
 
-        {/* ── RISK ZONE DETAIL (bottom-right popup) ── */}
+        {/* ── RISK ZONE POPUP ── */}
         <AnimatePresence>
           {selectedZone && (
             <motion.div
@@ -268,14 +398,22 @@ export default function MapPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-risk-low animate-pulse" />
                 <span className="text-[10px] font-mono text-text-muted">LIVE</span>
               </div>
-              <span className="text-[10px] text-text-muted">Routes: <span className="text-text-primary font-mono">{data.summary.totalRoutes}</span></span>
-              <span className="text-[10px] text-text-muted">Shipments: <span className="text-text-primary font-mono">{data.summary.activeShipments.toLocaleString()}</span></span>
-              <span className="text-[10px] text-text-muted">High Risk: <span className="text-risk-high font-mono">{data.summary.highRiskCount}</span></span>
+              <span className="text-[10px] text-text-muted">
+                Mode: <span className="text-neon-blue font-mono">{isEnhanced ? 'ENHANCED' : 'CLASSIC'}</span>
+              </span>
+              {isEnhanced && enhancedData && (
+                <span className="text-[10px] text-text-muted">
+                  Transport: <span className="text-text-primary font-mono">{(enhancedData.transportMode || 'sea').toUpperCase()}</span>
+                </span>
+              )}
+              <span className="text-[10px] text-text-muted">
+                Risk Zones: <span className="text-risk-high font-mono">{(isEnhanced ? enhancedData : oldData)?.summary.highRiskCount || 0}</span>
+              </span>
             </div>
             <div className="flex items-center gap-3">
               {shipment && (
                 <span className="text-[10px] text-neon-cyan font-mono">
-                  {shipment.source || 'Shanghai'} → {shipment.destination || 'Los Angeles'}
+                  {shipment.source || 'Mumbai'} → {shipment.destination || 'Dubai'}
                 </span>
               )}
             </div>
