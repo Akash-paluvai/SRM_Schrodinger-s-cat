@@ -48,3 +48,6 @@ backend/AIAgent/.env
 .vscode/
 *.swp
 *.swo
+
+__pycache__/
+*.pyc
