@@ -1,262 +1,284 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { memo, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
-import { StatusBadge, MetricCard } from '@/components/ui';
+import { MetricCard, SectionLabel, StatusBadge } from '@/components/ui';
+import { useAppStore } from '@/lib/store';
 
-interface Route {
-  id: string;
-  name: string;
-  origin: { lat: number; lng: number; label: string };
-  destination: { lat: number; lng: number; label: string };
-  risk: string;
-  riskScore: number;
-  delay: string;
-  costImpact: string;
-  cause: string;
-  suggestedReroute: string;
-  status: string;
-  cargo: string;
-  vessel: string;
+/* ═══════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════ */
+interface Waypoint { lat: number; lng: number; name: string }
+interface Segment { from: string; to: string; coords: [number, number][] }
+interface RouteOption {
+  id: string; label: string; type: string;
+  waypoints: Waypoint[]; distance: string; time: string;
+  cost: string; riskScore: number; riskLevel: string;
+  reasoning: string; segments: Segment[];
 }
-
-interface MapData {
-  routes: Route[];
-  riskZones: { lat: number; lng: number; radius: number; risk: string; label: string }[];
-  vehicles: { id: string; routeId: string; progress: number; type: string }[];
+interface RiskZone {
+  lat: number; lng: number; radius: number;
+  risk: string; label: string; cause: string;
+}
+interface MapApiData {
+  source: Waypoint; destination: Waypoint;
+  stops: Waypoint[];
+  routes: { fastest: RouteOption; cheapest: RouteOption; safest: RouteOption };
+  riskZones: RiskZone[];
   summary: { totalRoutes: number; activeShipments: number; highRiskCount: number; avgDelay: string };
 }
 
-export default function MapPage() {
-  const [data, setData] = useState<MapData | null>(null);
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+/* ═══════════════════════════════════════════════════════
+   LEAFLET MAP COMPONENT (dynamic - no SSR)
+   ═══════════════════════════════════════════════════════ */
+const LeafletMap = dynamic(() => import('@/components/LeafletMap'), { ssr: false });
 
+/* ═══════════════════════════════════════════════════════
+   ROUTE TYPE CONFIG
+   ═══════════════════════════════════════════════════════ */
+const ROUTE_TYPES = [
+  { key: 'fastest', label: '⚡ Fastest', color: '#00F0FF' },
+  { key: 'cheapest', label: '💰 Cheapest', color: '#22C55E' },
+  { key: 'safest', label: '🛡️ Safest', color: '#A78BFA' },
+] as const;
+
+/* ═══════════════════════════════════════════════════════
+   MAIN PAGE
+   ═══════════════════════════════════════════════════════ */
+export default function MapPage() {
+  const router = useRouter();
+  const shipment = useAppStore((s) => s.shipment);
+  const [data, setData] = useState<MapApiData | null>(null);
+  const [activeRoute, setActiveRoute] = useState<'fastest' | 'cheapest' | 'safest'>('fastest');
+  const [showRiskZones, setShowRiskZones] = useState(true);
+  const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
+  const [aiMode, setAiMode] = useState(false);
+
+  /* ── Fetch map data (integrated with /home shipment) ── */
   useEffect(() => {
-    fetch('/api/map-data')
+    const params = new URLSearchParams();
+    if (shipment) {
+      params.set('source', shipment.source || 'Shanghai');
+      params.set('destination', shipment.destination || 'Los Angeles');
+      if (shipment.stops.length > 0) {
+        params.set('stops', shipment.stops.map((s) => s.location).filter(Boolean).join(','));
+      }
+    }
+    fetch(`/api/map-data?${params.toString()}`)
       .then((r) => r.json())
       .then(setData);
-  }, []);
+  }, [shipment]);
+
+  /* ── AI auto-select ── */
+  useEffect(() => {
+    if (aiMode && data) {
+      const routes = data.routes;
+      let best: 'fastest' | 'cheapest' | 'safest' = 'fastest';
+      if (routes.safest.riskScore < 20) best = 'safest';
+      else if (routes.cheapest.riskScore < 40) best = 'cheapest';
+      setActiveRoute(best);
+    }
+  }, [aiMode, data]);
+
+  const currentRoute = data?.routes[activeRoute] || null;
 
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-14 pb-14">
-        <div className="text-text-muted text-sm font-mono animate-pulse">Loading map data...</div>
+        <div className="text-text-muted text-sm font-mono animate-pulse">Initializing global map...</div>
       </div>
     );
   }
 
-  const riskColor = (risk: string) => {
-    if (risk === 'HIGH') return 'text-risk-high';
-    if (risk === 'MEDIUM') return 'text-risk-medium';
-    return 'text-risk-low';
-  };
-
-  const riskBg = (risk: string) => {
-    if (risk === 'HIGH') return 'bg-risk-high';
-    if (risk === 'MEDIUM') return 'bg-risk-medium';
-    return 'bg-risk-low';
-  };
-
   return (
     <main className="min-h-screen pt-14 pb-14 relative">
-      {/* Map Container */}
-      <div className="w-full h-[calc(100vh-112px)] relative bg-bg-secondary overflow-hidden">
-        {/* Simulated Map Background */}
-        <div className="absolute inset-0">
-          {/* Grid overlay */}
-          <svg className="w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-                <path d="M 80 0 L 0 0 0 80" fill="none" stroke="rgba(59,130,246,0.08)" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
+      <div className="w-full h-[calc(100vh-112px)] relative overflow-hidden">
 
-        {/* Risk Zones */}
-        {data.riskZones.map((zone, i) => (
-          <div
-            key={i}
-            className={`absolute rounded-full animate-pulse ${zone.risk === 'HIGH' ? 'bg-risk-high/10 shadow-[0_0_60px_rgba(239,68,68,0.15)]' : 'bg-risk-medium/8 shadow-[0_0_40px_rgba(245,158,11,0.1)]'}`}
-            style={{
-              left: `${(zone.lng + 180) / 360 * 100}%`,
-              top: `${(90 - zone.lat) / 180 * 100}%`,
-              width: `${zone.radius / 5}px`,
-              height: `${zone.radius / 5}px`,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-text-muted font-mono">
-              {zone.label}
-            </div>
-          </div>
-        ))}
+        {/* ── LEAFLET MAP ── */}
+        <LeafletMap
+          source={data.source}
+          destination={data.destination}
+          stops={data.stops}
+          currentRoute={currentRoute}
+          allRoutes={data.routes}
+          activeRouteType={activeRoute}
+          riskZones={showRiskZones ? data.riskZones : []}
+          onZoneClick={setSelectedZone}
+        />
 
-        {/* Route Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          {data.routes.map((route) => {
-            const x1 = ((route.origin.lng + 180) / 360) * 100;
-            const y1 = ((90 - route.origin.lat) / 180) * 100;
-            const x2 = ((route.destination.lng + 180) / 360) * 100;
-            const y2 = ((90 - route.destination.lat) / 180) * 100;
-            const strokeColor = route.risk === 'HIGH' ? '#EF4444' : route.risk === 'MEDIUM' ? '#F59E0B' : '#3B82F6';
-            const cx = (x1 + x2) / 2;
-            const cy = Math.min(y1, y2) - 8;
-            return (
-              <g key={route.id}>
-                <path
-                  d={`M ${x1}% ${y1}% Q ${cx}% ${cy}% ${x2}% ${y2}%`}
-                  stroke={strokeColor}
-                  strokeWidth="1.5"
-                  fill="none"
-                  opacity="0.5"
-                  strokeDasharray="4 4"
-                  className="pointer-events-auto cursor-pointer"
-                  onClick={() => setSelectedRoute(route)}
-                />
-                {/* Origin node */}
-                <circle cx={`${x1}%`} cy={`${y1}%`} r="4" fill={strokeColor} opacity="0.8" />
-                {/* Destination node */}
-                <circle cx={`${x2}%`} cy={`${y2}%`} r="4" fill={strokeColor} opacity="0.8" />
-              </g>
-            );
-          })}
-
-          {/* Moving vehicles */}
-          {data.vehicles.map((v) => {
-            const route = data.routes.find((r) => r.id === v.routeId);
-            if (!route) return null;
-            const x1 = ((route.origin.lng + 180) / 360) * 100;
-            const y1 = ((90 - route.origin.lat) / 180) * 100;
-            const x2 = ((route.destination.lng + 180) / 360) * 100;
-            const y2 = ((90 - route.destination.lat) / 180) * 100;
-            const vx = x1 + (x2 - x1) * v.progress;
-            const vy = y1 + (y2 - y1) * v.progress - Math.sin(v.progress * Math.PI) * 8;
-            return (
-              <g key={v.id}>
-                <circle cx={`${vx}%`} cy={`${vy}%`} r="3" fill="#00F0FF" opacity="0.9">
-                  <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
-                </circle>
-                <circle cx={`${vx}%`} cy={`${vy}%`} r="8" fill="#00F0FF" opacity="0.15">
-                  <animate attributeName="r" values="8;14;8" dur="2s" repeatCount="indefinite" />
-                </circle>
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Route Labels */}
-        {data.routes.map((route) => {
-          const x = ((route.origin.lng + 180) / 360) * 100;
-          const y = ((90 - route.origin.lat) / 180) * 100;
-          return (
-            <button
-              key={route.id + '-label'}
-              className="absolute text-[9px] font-mono text-text-secondary hover:text-text-primary transition-colors cursor-pointer z-10"
-              style={{ left: `${x}%`, top: `${y + 3}%`, transform: 'translateX(-50%)' }}
-              onClick={() => setSelectedRoute(route)}
-            >
-              {route.origin.label}
-            </button>
-          );
-        })}
-
-        {/* Summary Panel (top-left) */}
+        {/* ── ROUTE SELECTOR (top-left) ── */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="absolute top-4 left-4 z-20"
+          className="absolute top-4 left-4 z-[1000]"
         >
-          <GlassPanel className="p-4 w-56">
-            <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-3">System Overview</div>
-            <div className="space-y-2.5">
-              <div className="flex justify-between">
-                <span className="text-xs text-text-secondary">Active Routes</span>
-                <span className="text-xs font-mono font-semibold text-neon-cyan">{data.summary.totalRoutes}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-text-secondary">Shipments</span>
-                <span className="text-xs font-mono font-semibold text-neon-blue">{data.summary.activeShipments.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-text-secondary">High Risk</span>
-                <span className="text-xs font-mono font-semibold text-risk-high">{data.summary.highRiskCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-xs text-text-secondary">Avg. Delay</span>
-                <span className="text-xs font-mono font-semibold text-risk-medium">{data.summary.avgDelay}</span>
-              </div>
+          <GlassPanel className="p-4 w-64">
+            <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-3">Route Options</div>
+            <div className="space-y-1.5">
+              {ROUTE_TYPES.map((rt) => {
+                const route = data.routes[rt.key];
+                return (
+                  <button
+                    key={rt.key}
+                    onClick={() => { setActiveRoute(rt.key); setAiMode(false); }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left transition-all cursor-pointer border ${
+                      activeRoute === rt.key
+                        ? 'border-neon-blue/30 bg-neon-blue/8'
+                        : 'border-white/5 bg-white/[0.01] hover:bg-white/[0.03] hover:border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: rt.color }} />
+                      <span className="text-xs font-medium text-text-primary">{rt.label}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-text-muted">{route.time}</span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Controls */}
+            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-[10px] text-text-muted uppercase tracking-wider">Risk Overlay</span>
+                <button
+                  onClick={() => setShowRiskZones(!showRiskZones)}
+                  className={`w-8 h-4 rounded-full transition-all ${showRiskZones ? 'bg-neon-blue/40' : 'bg-white/10'}`}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform ${showRiskZones ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                </button>
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-[10px] text-text-muted uppercase tracking-wider">AI Auto-Select</span>
+                <button
+                  onClick={() => setAiMode(!aiMode)}
+                  className={`w-8 h-4 rounded-full transition-all ${aiMode ? 'bg-risk-low/40' : 'bg-white/10'}`}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform ${aiMode ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                </button>
+              </label>
+            </div>
+
+            {aiMode && (
+              <div className="mt-2 px-2 py-1.5 rounded bg-risk-low/10 border border-risk-low/20">
+                <div className="text-[9px] text-risk-low font-mono">AI SELECTED: {activeRoute.toUpperCase()}</div>
+              </div>
+            )}
           </GlassPanel>
         </motion.div>
 
-        {/* Route Detail Panel (right side) */}
-        {selectedRoute && (
+        {/* ── ROUTE DETAIL PANEL (right side) ── */}
+        {currentRoute && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="absolute top-4 right-4 z-20 w-80"
+            className="absolute top-4 right-4 z-[1000] w-72"
           >
-            <GlassPanel className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-mono text-xs text-text-muted">{selectedRoute.id}</span>
-                <button
-                  onClick={() => setSelectedRoute(null)}
-                  className="text-text-muted hover:text-text-primary text-sm cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-              <h3 className="font-heading font-bold text-base mb-1">{selectedRoute.name}</h3>
-              <div className="flex items-center gap-2 mb-4">
-                <StatusBadge level={selectedRoute.risk === 'HIGH' ? 'high' : selectedRoute.risk === 'MEDIUM' ? 'medium' : 'low'} />
-                <span className="text-xs text-text-secondary">{selectedRoute.vessel}</span>
+            <GlassPanel className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase tracking-widest text-text-muted font-semibold">Route Summary</span>
+                <StatusBadge level={currentRoute.riskLevel === 'HIGH' ? 'high' : currentRoute.riskLevel === 'MEDIUM' ? 'medium' : 'low'} />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <MetricCard label="Risk Score" value={String(selectedRoute.riskScore)} color={riskColor(selectedRoute.risk)} />
-                <MetricCard label="Delay" value={selectedRoute.delay} color="text-risk-medium" />
-                <MetricCard label="Cost Impact" value={selectedRoute.costImpact} color="text-risk-high" />
-                <MetricCard label="Cargo" value={selectedRoute.cargo} color="text-text-primary" />
+              <div className="text-sm font-heading font-bold text-text-primary mb-1">{currentRoute.label}</div>
+              <div className="text-[10px] text-text-muted mb-3">
+                {data.source.name} → {data.stops.map((s) => s.name).join(' → ')}{data.stops.length > 0 ? ' → ' : ''}{data.destination.name}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <MetricCard label="Distance" value={currentRoute.distance} color="text-neon-cyan" />
+                <MetricCard label="Time" value={currentRoute.time} color="text-neon-blue" />
+                <MetricCard label="Cost" value={currentRoute.cost} color="text-risk-low" />
+                <MetricCard label="Risk" value={`${currentRoute.riskScore}/100`} color={currentRoute.riskScore > 60 ? 'text-risk-high' : currentRoute.riskScore > 30 ? 'text-risk-medium' : 'text-risk-low'} />
               </div>
 
               <div className="mb-3">
-                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">Cause</div>
-                <p className="text-xs text-text-secondary leading-relaxed">{selectedRoute.cause}</p>
+                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">AI Reasoning</div>
+                <p className="text-xs text-text-secondary leading-relaxed">{currentRoute.reasoning}</p>
               </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">AI Recommendation</div>
-                <p className="text-xs text-neon-blue leading-relaxed">{selectedRoute.suggestedReroute}</p>
+
+              {/* Segments */}
+              <div className="mb-3">
+                <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Route Segments</div>
+                <div className="space-y-1">
+                  {currentRoute.segments.map((seg, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                      <div className="w-1 h-1 rounded-full bg-neon-cyan" />
+                      <span className="text-text-secondary">{seg.from} → {seg.to}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System integration buttons */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { label: 'Intelligence', route: '/intelligence' },
+                  { label: 'Simulation', route: '/simulation' },
+                  { label: 'Explain', route: '/explainability' },
+                  { label: 'Graph', route: '/graph' },
+                ].map((btn) => (
+                  <button
+                    key={btn.route}
+                    onClick={() => router.push(btn.route)}
+                    className="px-2 py-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-[10px] text-text-muted hover:text-neon-blue hover:border-neon-blue/20 transition-all cursor-pointer text-center"
+                  >
+                    {btn.label} →
+                  </button>
+                ))}
               </div>
             </GlassPanel>
           </motion.div>
         )}
 
-        {/* Route List (bottom) */}
+        {/* ── RISK ZONE DETAIL (bottom-right popup) ── */}
+        <AnimatePresence>
+          {selectedZone && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute bottom-20 right-4 z-[1000] w-64"
+            >
+              <GlassPanel className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <StatusBadge level={selectedZone.risk === 'HIGH' ? 'high' : selectedZone.risk === 'MEDIUM' ? 'medium' : 'low'} />
+                  <button onClick={() => setSelectedZone(null)} className="text-text-muted hover:text-text-primary text-xs cursor-pointer">✕</button>
+                </div>
+                <div className="text-xs font-medium text-text-primary mb-1">{selectedZone.label}</div>
+                <div className="text-[10px] text-text-secondary">{selectedZone.cause}</div>
+              </GlassPanel>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── BOTTOM STATUS BAR ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="absolute bottom-4 left-4 right-4 z-20"
+          transition={{ delay: 0.3 }}
+          className="absolute bottom-4 left-4 right-4 z-[1000]"
         >
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {data.routes.map((route) => (
-              <button
-                key={route.id}
-                onClick={() => setSelectedRoute(route)}
-                className={`flex-shrink-0 glass px-4 py-2.5 flex items-center gap-3 cursor-pointer transition-all hover:border-white/15 ${
-                  selectedRoute?.id === route.id ? 'border-neon-blue/30 bg-neon-blue/5' : ''
-                }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${riskBg(route.risk)}`} />
-                <div className="text-left">
-                  <div className="text-xs font-medium text-text-primary">{route.name}</div>
-                  <div className="text-[10px] text-text-muted font-mono">{route.status} • {route.delay}</div>
-                </div>
-              </button>
-            ))}
+          <div className="flex items-center justify-between glass px-4 py-2.5 rounded-xl">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-risk-low animate-pulse" />
+                <span className="text-[10px] font-mono text-text-muted">LIVE</span>
+              </div>
+              <span className="text-[10px] text-text-muted">Routes: <span className="text-text-primary font-mono">{data.summary.totalRoutes}</span></span>
+              <span className="text-[10px] text-text-muted">Shipments: <span className="text-text-primary font-mono">{data.summary.activeShipments.toLocaleString()}</span></span>
+              <span className="text-[10px] text-text-muted">High Risk: <span className="text-risk-high font-mono">{data.summary.highRiskCount}</span></span>
+            </div>
+            <div className="flex items-center gap-3">
+              {shipment && (
+                <span className="text-[10px] text-neon-cyan font-mono">
+                  {shipment.source || 'Shanghai'} → {shipment.destination || 'Los Angeles'}
+                </span>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>
