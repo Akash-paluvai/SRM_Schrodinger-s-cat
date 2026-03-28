@@ -10,8 +10,8 @@ from typing import Any
 from decision.route_graph import build_graph, DEFAULT_ROUTE_OPTIONS
 from decision.cost_function import CostConfig, DEFAULT_COST_CONFIG
 from decision.optimizer import Optimizer
+from decision.qubo_optimizer import run_qubo_optimizer
 
-# ✅ NEW
 from decision.decision_utils import (
     compute_route_metrics,
     compute_score,
@@ -113,27 +113,43 @@ def run_decision_engine(
 
     robust = routes.get("robust")
 
+    # -------- QUBO Optimization --------
+    qubo_result = run_qubo_optimizer(
+        graph=G,
+        source=source,
+        destination=destination,
+        intelligence_state=intelligence,
+        simulation_output=simulation,
+        game_theory_output=game,
+    )
+    qubo_route = qubo_result.get("optimal_route", base_result.get("best_route", []))
+
     # -------- Confidence --------
-    volatility = intelligence.get("volatility", 0.2)
-    base_conf = game.get("confidence", 0.8)
-    confidence = round(base_conf * (1 - volatility), 2)
+    raw_vol    = float(intelligence.get("volatility", 20.0))
+    vol_norm   = min(1.0, raw_vol / 10000.0)
+    base_conf  = float(game.get("confidence", 0.8))
+    confidence = round(base_conf * (1.0 - vol_norm), 4)
 
     elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
 
     return {
         **base_result,
 
-        # ✅ STEP 4 OUTPUT
         "strategies": {
-            "safe_route": safe_route,
-            "cost_optimal": cost_optimal,
+            "safe_route":    safe_route,
+            "cost_optimal":  cost_optimal,
             "balanced_route": balanced,
-            "robust_route": robust,
+            "robust_route":  robust,
+            "qubo_route":    qubo_route,
         },
-        "confidence": confidence,
+        "qubo_result":     qubo_result,
+        "confidence":      confidence,
         "rejected_routes": rejected_routes,
-        "reasoning": "Balanced route minimizes combined cost, risk, and delay",
-
+        "reasoning": (
+            "QUBO-optimal route selected via quantum-inspired binary optimization "
+            "(objective: 50% distance + 30% risk + 20% delay, "
+            "constraints: one-hot selection, risk ≤ 80, SLA ≤ 30d, budget ≤ 25000km)"
+        ),
         "execution_time_ms": elapsed_ms,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

@@ -25,7 +25,7 @@ class WeatherAgent(BaseAgent):
         self.tools = ["OpenWeatherMap API", "LangChain LLM"]
         self.lat = lat
         self.lon = lon
-        self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1, google_api_key=os.getenv("GEMINI_API_KEY"))
+        self.llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.1, google_api_key=os.getenv("GEMINI_API_KEY"))
 
     def fetch_data(self) -> dict | None:
         """Fetch current weather for the configured coordinates."""

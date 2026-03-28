@@ -1,12 +1,17 @@
-SLA_LIMIT = 10
-BUDGET_LIMIT = 1000
+SLA_LIMIT    = 30     # days
+BUDGET_LIMIT = 25000  # km
 
 
 def compute_route_metrics(route, intelligence, simulation):
+    # route is a list of node names e.g. ["Mumbai", "Suez Canal", "Rotterdam"]
+    if isinstance(route, list):
+        approx_distance_km = max(len(route) - 1, 1) * 7000
+    else:
+        approx_distance_km = 14000
     return {
-        "distance": route.get("distance", 100),
-        "risk": intelligence.get("total_risk", 50),
-        "delay": simulation.get("expected_delay", 2),
+        "distance": approx_distance_km,
+        "risk":     intelligence.get("total_risk", 50),
+        "delay":    simulation.get("expected_delay", 2),
     }
 
 

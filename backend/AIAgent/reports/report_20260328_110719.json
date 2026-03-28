@@ -1,0 +1,320 @@
+{
+  "step1_risk_assessment": {
+    "agents": [
+      {
+        "agent": "demand",
+        "risk_score": 40,
+        "reason": "ML-forecasted max spike: 10.7% (forecasts: supply chain:51.0, shipping delay:0.5)",
+        "confidence": 0.75,
+        "timestamp": "2026-03-28T11:07:26.136429+00:00"
+      },
+      {
+        "agent": "news",
+        "risk_score": 100,
+        "reason": "Overall sentiment: LABEL_0 across 18 articles. Risk keywords: war, shutdown (total: 3)",
+        "confidence": 0.86,
+        "timestamp": "2026-03-28T11:07:26.303917+00:00"
+      },
+      {
+        "agent": "supplier",
+        "risk_score": 17.8,
+        "reason": "ML-predicted risk: 17.8 based on supplier data. Avg reliability: 0.809 across 10 suppliers. Worst: QuickPack Solutions (0.6)",
+        "confidence": 0.9,
+        "timestamp": "2026-03-28T11:07:23.483062+00:00"
+      },
+      {
+        "agent": "traffic",
+        "risk_score": 57.1,
+        "reason": "ML-predicted risk: 57.1 based on congestion ratio 0.471 (speed 9/17 km/h)",
+        "confidence": 0.85,
+        "timestamp": "2026-03-28T11:07:28.870540+00:00"
+      },
+      {
+        "agent": "weather",
+        "risk_score": 30,
+        "reason": "Agent error \u2014 fallback risk: Error calling model 'gemini-2.0-flash' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\\nPlease retry in 52.046551321s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '52s'}]}}",
+        "confidence": 0.2,
+        "timestamp": "2026-03-28T11:08:07.160366+00:00"
+      }
+    ],
+    "final_risk": 56.2,
+    "risk_level": "HIGH",
+    "timestamp": "2026-03-28T11:08:07.163506+00:00",
+    "intelligence_state": {
+      "total_risk": 56.2,
+      "risk_breakdown": {
+        "demand": 40,
+        "news": 100,
+        "supplier": 17.8,
+        "traffic": 57.1,
+        "weather": 30
+      },
+      "trend": 0,
+      "volatility": 816.41,
+      "dominant_risk": "news",
+      "correlations": []
+    }
+  },
+  "step2_simulation": {
+    "expected_delay": 6.26,
+    "max_delay": 19.156,
+    "min_delay": 0.026,
+    "std_delay": 6.096,
+    "avg_impact_score": 17.876,
+    "max_impact_score": 30.007,
+    "most_critical_node": "warehouse",
+    "avg_nodes_impacted": 3.53,
+    "disruption_frequency": {
+      "warehouse": 21,
+      "shipping": 20,
+      "supplier": 16,
+      "customer": 15,
+      "port_origin": 18,
+      "port_destination": 10
+    },
+    "impact_level": "MODERATE",
+    "simulation_runs": 100,
+    "scenarios": [
+      {
+        "type": "normal",
+        "expected_delay": 9.33
+      },
+      {
+        "type": "storm",
+        "expected_delay": 9.96
+      },
+      {
+        "type": "conflict",
+        "expected_delay": 10.0
+      }
+    ],
+    "scenario_expected_delay": 9.76,
+    "p95_delay": 10.0,
+    "probability_severe": 0.97,
+    "sensitivity": {
+      "traffic+10%": 3.09,
+      "weather+20%": 3.37
+    },
+    "node_impacts": {
+      "supplier": 1.0,
+      "port_origin": 1.0,
+      "shipping": 1.0,
+      "port_destination": 1.0,
+      "warehouse": 1.0,
+      "customer": 1.0
+    },
+    "execution_time_ms": 4.34,
+    "timestamp": "2026-03-28T11:08:07.168368+00:00",
+    "worst_case_delay": 10.0,
+    "disruption_probability": 0.97,
+    "risk_level": "MODERATE"
+  },
+  "step3_game_theory": {
+    "robust_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "expected_optimal_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "risk_adjusted_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "confidence": 0.0,
+    "payoff_matrix": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "normal": -1.397333,
+        "storm": -2.134399,
+        "conflict": -2.444933
+      }
+    },
+    "route_costs": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "normal": 1.397333,
+        "storm": 2.134399,
+        "conflict": 2.444933
+      }
+    },
+    "scenarios": [
+      {
+        "name": "normal",
+        "probability": 0.0,
+        "risk_mult": 1.0,
+        "delay_mult": 1.0,
+        "description": "Baseline \u2014 no major disruption"
+      },
+      {
+        "name": "storm",
+        "probability": 0.6,
+        "risk_mult": 1.6,
+        "delay_mult": 2.0,
+        "description": "Severe weather event"
+      },
+      {
+        "name": "conflict",
+        "probability": 0.4,
+        "risk_mult": 2.0,
+        "delay_mult": 1.8,
+        "description": "Geopolitical conflict or canal closure"
+      }
+    ],
+    "strategy_scores": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "worst_case_cost": 2.444933,
+        "expected_cost": 2.258613,
+        "risk_adjusted_score": 2.527651,
+        "variance": 0.289527
+      }
+    },
+    "dominated_removed": [
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam",
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+      "Mumbai \u2192 Singapore \u2192 Rotterdam",
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam"
+    ],
+    "high_risk_removed": [],
+    "lambda_risk": 0.5,
+    "timestamp": "2026-03-28T11:08:07.170196+00:00"
+  },
+  "step4_decision": {
+    "best_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "total_distance": 7700.0,
+    "total_risk": 0.8807,
+    "total_delay": 0.2087,
+    "final_score": 0.459934,
+    "method_used": "dijkstra",
+    "reason": "Lowest combined cost under uncertainty (weighted: 50% distance, 30% risk, 20% delay)",
+    "edge_details": [
+      {
+        "from": "Mumbai",
+        "to": "Dubai",
+        "distance": 1900.0,
+        "risk": 0.4237,
+        "delay": 0.1043,
+        "weight": 0.185967
+      },
+      {
+        "from": "Dubai",
+        "to": "Rotterdam",
+        "distance": 5800.0,
+        "risk": 0.457,
+        "delay": 0.1043,
+        "weight": 0.273967
+      }
+    ],
+    "strategies": {
+      "safe_route": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 56.2,
+          "delay": 6.26
+        },
+        "score": 7018.112
+      },
+      "cost_optimal": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 56.2,
+          "delay": 6.26
+        },
+        "score": 7018.112
+      },
+      "balanced_route": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 56.2,
+          "delay": 6.26
+        },
+        "score": 7018.112
+      },
+      "robust_route": [
+        "Mumbai",
+        "Dubai",
+        "Rotterdam"
+      ]
+    },
+    "confidence": 0.0,
+    "rejected_routes": [],
+    "reasoning": "Balanced route minimizes combined cost, risk, and delay",
+    "execution_time_ms": 2.23,
+    "timestamp": "2026-03-28T11:08:07.173016+00:00"
+  },
+  "step5_economic": {
+    "routes": [
+      {
+        "route_id": "safe_route",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.56,
+          "currency": 1.1
+        }
+      },
+      {
+        "route_id": "cost_optimal",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.56,
+          "currency": 1.1
+        }
+      },
+      {
+        "route_id": "balanced_route",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.56,
+          "currency": 1.1
+        }
+      }
+    ],
+    "economic_summary": {
+      "oil_impact_percent": 21.43,
+      "demand_impact_percent": 56.2,
+      "total_cost_increase_percent": 100.0
+    },
+    "recommended_route": {
+      "route_id": "safe_route",
+      "base_cost": 14000,
+      "adjusted_cost": 21000.0,
+      "economic_factors": {
+        "oil": 1.21,
+        "demand": 1.56,
+        "currency": 1.1
+      }
+    },
+    "timestamp": "2026-03-28T11:08:07.173657+00:00"
+  },
+  "meta": {
+    "run_id": "20260328_110719",
+    "timestamp": "2026-03-28T11:07:19.431413+00:00"
+  }
+}

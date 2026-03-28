@@ -45,8 +45,10 @@ def run_economic_engine(
         if not route_data:
             continue
 
-        route = route_data.get("route", {})
-        base_cost = route.get("distance", 100)
+        if not isinstance(route_data, dict):
+            continue
+        metrics   = route_data.get("metrics", {})
+        base_cost = metrics.get("distance", 14000)
 
         adjusted_cost = base_cost * multiplier
 
