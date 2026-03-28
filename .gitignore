@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# backend
+backend/AIAgent/.env
+
 # IDEs and Editors
 .idea/
 .vscode/
