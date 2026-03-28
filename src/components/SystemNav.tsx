@@ -2,8 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 
-const systemRoutes = ['/map', '/intelligence', '/simulation', '/explainability', '/graph'];
+const systemRoutes = ['/home', '/map', '/intelligence', '/simulation', '/explainability', '/graph'];
 const routeLabels: Record<string, string> = {
+  '/home': 'Command Center',
   '/map': 'Global Map',
   '/intelligence': 'Intelligence',
   '/simulation': 'Simulation',
