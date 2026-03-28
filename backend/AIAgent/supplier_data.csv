@@ -1,0 +1,11 @@
+supplier_name,reliability_score,region,category
+Acme Manufacturing,0.92,Asia,Electronics
+Global Textiles Ltd,0.78,Asia,Textiles
+PrecisionParts Inc,0.85,North America,Automotive
+EuroChemicals GmbH,0.88,Europe,Chemicals
+FastShip Logistics,0.65,Asia,Logistics
+SteelWorks Corp,0.91,North America,Metals
+RawMaterials SA,0.72,South America,Raw Materials
+TechComponents Ltd,0.95,Europe,Electronics
+QuickPack Solutions,0.60,Asia,Packaging
+GreenEnergy Supply,0.83,Europe,Energy
