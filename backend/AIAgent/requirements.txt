@@ -4,3 +4,10 @@ pytrends>=4.9.0
 networkx>=3.2
 numpy>=1.26
 scikit-learn>=1.4
+# ── FastAPI + MongoDB Atlas ────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+motor>=3.4.0
+pymongo>=4.7.0
+pydantic>=2.7.0
+python-multipart>=0.0.9

@@ -46,6 +46,11 @@ interface AppStore {
   shipment: ShipmentPayload | null;
   setShipment: (payload: ShipmentPayload) => void;
   clearShipment: () => void;
+
+  /** MongoDB _id of the saved shipment — set after successful DB write */
+  shipmentDbId: string | null;
+  setShipmentDbId: (id: string) => void;
+  clearShipmentDbId: () => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -56,4 +61,8 @@ export const useAppStore = create<AppStore>((set) => ({
   shipment: null,
   setShipment: (payload) => set({ shipment: payload }),
   clearShipment: () => set({ shipment: null }),
+
+  shipmentDbId: null,
+  setShipmentDbId: (id) => set({ shipmentDbId: id }),
+  clearShipmentDbId: () => set({ shipmentDbId: null }),
 }));

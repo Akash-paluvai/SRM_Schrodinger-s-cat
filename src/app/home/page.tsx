@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GlassPanel from '@/components/GlassPanel';
 import { MetricCard, SectionLabel } from '@/components/ui';
 import { useAppStore, ShipmentPayload, ShipmentStop } from '@/lib/store';
+import { Trash2 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
    STABLE INPUT COMPONENTS (outside the parent component)
@@ -116,13 +117,23 @@ const StopInput = memo(function StopInput({
 /* ═══════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════ */
+interface RecentShipment {
+  id: string;           // MongoDB _id (or mock-* for fallback)
+  displayId: string;    // e.g. SH-4821
+  route: string;
+  status: string;
+  mode: string;
+  eta: string;
+  cargo: string;
+}
+
 interface DashboardData {
   operations: { totalShipments: number; activeDeliveries: number; completedDeliveries: number };
   trade: { importsVolume: string; exportsVolume: string };
   performance: { onTimeRate: number; avgDelayReduction: string; costOptimization: number };
   risk: { riskIndex: number; activeDisruptions: number };
   extra: { revenueHandled: string; aiConfidence: number };
-  recentShipments: { id: string; route: string; status: string; mode: string; eta: string; cargo: string }[];
+  recentShipments: RecentShipment[];
   activeAlerts: { id: number; severity: string; title: string; time: string }[];
 }
 
@@ -175,12 +186,14 @@ const alertDot = (s: string) => {
    ═══════════════════════════════════════════════════════ */
 export default function HomePage() {
   const router = useRouter();
-  const setShipment = useAppStore((s) => s.setShipment);
+  const setShipment    = useAppStore((s) => s.setShipment);
+  const setShipmentDbId = useAppStore((s) => s.setShipmentDbId);
   const [data, setData] = useState<DashboardData | null>(null);
   const [form, setForm] = useState<ShipmentPayload>({ ...defaultForm });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'create'>('dashboard');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/home-data').then((r) => r.json()).then(setData);
@@ -225,6 +238,22 @@ export default function HomePage() {
   const onRiskSelect = useCallback((v: string) => updateField('riskTolerance', v as 'low' | 'medium' | 'high'), [updateField]);
   const onDistributionSelect = useCallback((v: string) => updateField('distributionStrategy', v), [updateField]);
 
+  /* ── Delete shipment ── */
+  const handleDelete = useCallback(async (id: string) => {
+    if (!id) return;
+    setDeletingId(id);
+    try {
+      await fetch(`/api/shipments/${id}`, { method: 'DELETE' });
+      setData((prev) =>
+        prev
+          ? { ...prev, recentShipments: prev.recentShipments.filter((s) => s.id !== id) }
+          : prev,
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
   /* ── Submit ── */
   const handleSubmit = useCallback(async () => {
     setSubmitting(true);
@@ -242,12 +271,13 @@ export default function HomePage() {
         return;
       }
       setShipment(form);
+      if (result.dbId) setShipmentDbId(result.dbId);
       router.push('/map');
     } catch {
       setErrors(['Failed to submit. Please try again.']);
       setSubmitting(false);
     }
-  }, [form, setShipment, router]);
+  }, [form, setShipment, setShipmentDbId, router]);
 
   if (!data) {
     return (
@@ -336,17 +366,29 @@ export default function HomePage() {
                     <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-4">Recent Shipments</div>
                     <div className="space-y-2">
                       {data.recentShipments.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono text-[10px] text-text-muted w-16">{s.id}</span>
-                            <div>
-                              <div className="text-xs font-medium text-text-primary">{s.route}</div>
+                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] transition-colors group">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="font-mono text-[10px] text-text-muted w-16 flex-shrink-0">{s.displayId ?? s.id}</span>
+                            <div className="min-w-0">
+                              <div className="text-xs font-medium text-text-primary truncate">{s.route}</div>
                               <div className="text-[10px] text-text-muted">{s.cargo} • {s.mode}</div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className={`text-[10px] font-bold tracking-wider uppercase ${statusColor(s.status)}`}>{s.status.replace('_', ' ')}</div>
-                            <div className="text-[10px] text-text-muted font-mono">ETA {s.eta}</div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <div className="text-right">
+                              <div className={`text-[10px] font-bold tracking-wider uppercase ${statusColor(s.status)}`}>{s.status.replace('_', ' ')}</div>
+                              <div className="text-[10px] text-text-muted font-mono">ETA {s.eta}</div>
+                            </div>
+                            <button
+                              onClick={() => handleDelete(s.id)}
+                              disabled={deletingId === s.id}
+                              title="Delete shipment"
+                              className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-risk-high hover:bg-risk-high/10 transition-all cursor-pointer disabled:opacity-30"
+                            >
+                              {deletingId === s.id
+                                ? <span className="w-3 h-3 border border-risk-high/40 border-t-risk-high rounded-full animate-spin" />
+                                : <Trash2 size={12} />}
+                            </button>
                           </div>
                         </div>
                       ))}

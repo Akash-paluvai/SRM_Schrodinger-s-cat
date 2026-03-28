@@ -1,12 +1,13 @@
 'use client';
 
-import { memo, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
 import { MetricCard, SectionLabel, StatusBadge } from '@/components/ui';
 import { useAppStore } from '@/lib/store';
+import { CheckCircle } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
    TYPES
@@ -49,13 +50,16 @@ const ROUTE_TYPES = [
    MAIN PAGE
    ═══════════════════════════════════════════════════════ */
 export default function MapPage() {
-  const router = useRouter();
-  const shipment = useAppStore((s) => s.shipment);
-  const [data, setData] = useState<MapApiData | null>(null);
+  const router       = useRouter();
+  const shipment     = useAppStore((s) => s.shipment);
+  const shipmentDbId = useAppStore((s) => s.shipmentDbId);
+  const [data, setData]           = useState<MapApiData | null>(null);
   const [activeRoute, setActiveRoute] = useState<'fastest' | 'cheapest' | 'safest'>('fastest');
   const [showRiskZones, setShowRiskZones] = useState(true);
-  const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
-  const [aiMode, setAiMode] = useState(false);
+  const [selectedZone, setSelectedZone]   = useState<RiskZone | null>(null);
+  const [aiMode, setAiMode]       = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [savedRoute, setSavedRoute] = useState<string | null>(null);
 
   /* ── Fetch map data (integrated with /home shipment) ── */
   useEffect(() => {
@@ -82,6 +86,36 @@ export default function MapPage() {
       setActiveRoute(best);
     }
   }, [aiMode, data]);
+
+  /* ── Save selected route to DB ── */
+  const saveRoute = useCallback(async () => {
+    if (!shipmentDbId || !currentRoute) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/shipments/${shipmentDbId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'route_selection',
+          data: {
+            selectedRouteType:  activeRoute,
+            label:              currentRoute.label,
+            distance:           currentRoute.distance,
+            time:               currentRoute.time,
+            cost:               currentRoute.cost,
+            riskScore:          currentRoute.riskScore,
+            riskLevel:          currentRoute.riskLevel,
+            reasoning:          currentRoute.reasoning,
+            aiAutoSelected:     aiMode,
+            savedAt:            new Date().toISOString(),
+          },
+        }),
+      });
+      setSavedRoute(activeRoute);
+    } finally {
+      setSaving(false);
+    }
+  }, [shipmentDbId, currentRoute, activeRoute, aiMode]);
 
   const currentRoute = data?.routes[activeRoute] || null;
 
@@ -212,6 +246,27 @@ export default function MapPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Save route to DB */}
+              {shipmentDbId && (
+                <button
+                  onClick={saveRoute}
+                  disabled={saving || savedRoute === activeRoute}
+                  className={`w-full mb-2 py-2 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                    savedRoute === activeRoute
+                      ? 'border-risk-low/30 bg-risk-low/8 text-risk-low cursor-default'
+                      : 'border-neon-cyan/25 bg-neon-cyan/5 text-neon-cyan hover:bg-neon-cyan/12 hover:border-neon-cyan/40'
+                  }`}
+                >
+                  {saving ? (
+                    <><span className="w-3 h-3 border border-neon-cyan/40 border-t-neon-cyan rounded-full animate-spin" /> Saving…</>
+                  ) : savedRoute === activeRoute ? (
+                    <><CheckCircle size={11} /> Route Saved</>
+                  ) : (
+                    '💾 Save Route Selection'
+                  )}
+                </button>
+              )}
 
               {/* System integration buttons */}
               <div className="grid grid-cols-2 gap-1.5">

@@ -25,14 +25,18 @@ interface SimResult {
 
 export default function SimulationPage() {
   const [selected, setSelected] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<SimResult | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [result, setResult]     = useState<SimResult | null>(null);
+  const [savedToDb, setSavedToDb] = useState(false);
+
   const setSimulationResult = useAppStore((s) => s.setSimulationResult);
+  const shipmentDbId        = useAppStore((s) => s.shipmentDbId);
 
   const runSimulation = async () => {
     if (!selected) return;
     setLoading(true);
     setResult(null);
+    setSavedToDb(false);
 
     try {
       const res = await fetch('/api/simulate', {
@@ -43,6 +47,30 @@ export default function SimulationPage() {
       const data = await res.json();
       setResult(data);
       setSimulationResult(data);
+
+      /* ── Persist simulation result to DB if we have a shipment ID ── */
+      if (shipmentDbId) {
+        fetch(`/api/shipments/${shipmentDbId}`, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'simulation_result',
+            data: {
+              disruption:        selected,
+              delay:             data.delay,
+              costIncrease:      data.costIncrease,
+              suggestedRoute:    data.suggestedRoute,
+              confidence:        data.confidence,
+              reasoning:         data.reasoning,
+              affectedRoutes:    data.affectedRoutes,
+              affectedShipments: data.affectedShipments,
+              simulatedAt:       new Date().toISOString(),
+            },
+          }),
+        })
+          .then((r) => { if (r.ok) setSavedToDb(true); })
+          .catch(() => {}); // non-blocking
+      }
     } catch (e) {
       console.error('Simulation failed:', e);
     } finally {
@@ -137,6 +165,13 @@ export default function SimulationPage() {
                     </div>
                     <p className="text-xs text-text-secondary leading-relaxed">{result.reasoning}</p>
                   </GlassPanel>
+
+                  {savedToDb && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-risk-low/20 bg-risk-low/5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-risk-low" />
+                      <span className="text-[10px] text-risk-low font-mono">Simulation result saved to database</span>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div

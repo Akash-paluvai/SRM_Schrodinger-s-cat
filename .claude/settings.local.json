@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from fastapi_app import app\")",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(.venv/Scripts/python -m pip install fastapi \"uvicorn[standard]\" motor pymongo pydantic python-dotenv python-multipart)"
+    ]
+  }
+}
