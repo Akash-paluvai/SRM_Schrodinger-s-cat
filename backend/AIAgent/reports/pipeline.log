@@ -1,0 +1,168 @@
+2026-03-28 18:28:36 | INFO    | main               | ============================================================
+2026-03-28 18:28:36 | INFO    | main               |   SUPPLY CHAIN RISK PREDICTION PLATFORM
+2026-03-28 18:28:36 | INFO    | main               |   Run ID : 20260328_125836
+2026-03-28 18:28:36 | INFO    | main               | ============================================================
+2026-03-28 18:28:36 | INFO    | main               | STEP 1 — Multi-Agent Risk Assessment
+2026-03-28 18:28:38 | INFO    | httpx              | HTTP Request: HEAD https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-28 18:28:38 | WARNING | huggingface_hub.utils._http | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-03-28 18:28:39 | INFO    | httpx              | HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/cardiffnlp/twitter-roberta-base-sentiment-latest/3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7/config.json "HTTP/1.1 200 OK"
+2026-03-28 18:28:39 | INFO    | httpx              | HTTP Request: HEAD https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest/resolve/main/model.safetensors "HTTP/1.1 404 Not Found"
+2026-03-28 18:28:39 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest "HTTP/1.1 200 OK"
+2026-03-28 18:28:40 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest/commits/main "HTTP/1.1 200 OK"
+2026-03-28 18:28:40 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-03-28 18:28:40 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest/discussions?p=0 "HTTP/1.1 200 OK"
+2026-03-28 18:28:40 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-03-28 18:28:40 | INFO    | httpx              | HTTP Request: GET https://huggingface.co/api/models/cardiffnlp/twitter-roberta-base-sentiment-latest/commits/refs%2Fpr%2F43 "HTTP/1.1 200 OK"
+2026-03-28 18:28:41 | INFO    | WeatherAgent       | Agent [WEATHER] starting...
+2026-03-28 18:28:41 | INFO    | NewsAgent          | Agent [NEWS] starting...
+2026-03-28 18:28:41 | INFO    | TrafficAgent       | Agent [TRAFFIC] starting...
+2026-03-28 18:28:41 | INFO    | SupplierAgent      | Agent [SUPPLIER] starting...
+2026-03-28 18:28:41 | INFO    | DemandAgent        | Agent [DEMAND] starting...
+2026-03-28 18:28:41 | INFO    | SupplierAgent      | Loaded 10 supplier records
+2026-03-28 18:28:41 | INFO    | SupplierAgent      | Agent [SUPPLIER] complete — risk=17.8
+2026-03-28 18:28:41 | INFO    | httpx              | HTTP Request: HEAD https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest/resolve/refs%2Fpr%2F43/model.safetensors.index.json "HTTP/1.1 404 Not Found"
+2026-03-28 18:28:41 | INFO    | httpx              | HTTP Request: HEAD https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest/resolve/refs%2Fpr%2F43/model.safetensors "HTTP/1.1 302 Found"
+2026-03-28 18:28:41 | INFO    | google_genai.models | AFC is enabled with max remote calls: 10.
+2026-03-28 18:28:42 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:28:42 | INFO    | google_genai._api_client | Retrying google.genai._api_client.BaseApiClient._request_once in 1.88 seconds as it raised ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 16.814828559s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '16s'}]}}.
+2026-03-28 18:28:42 | INFO    | TrafficAgent       | Agent [TRAFFIC] complete — risk=65.6
+2026-03-28 18:28:44 | INFO    | NewsAgent          | Agent [NEWS] complete — risk=100
+2026-03-28 18:28:44 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:28:44 | INFO    | google_genai._api_client | Retrying google.genai._api_client.BaseApiClient._request_once in 2.88 seconds as it raised ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\nPlease retry in 14.647643677s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '14s'}]}}.
+2026-03-28 18:28:46 | INFO    | DemandAgent        | Agent [DEMAND] complete — risk=20
+2026-03-28 18:28:47 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:28:47 | INFO    | google_genai._api_client | Retrying google.genai._api_client.BaseApiClient._request_once in 4.83 seconds as it raised ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\nPlease retry in 11.35975923s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '11s'}]}}.
+2026-03-28 18:28:52 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:28:52 | INFO    | google_genai._api_client | Retrying google.genai._api_client.BaseApiClient._request_once in 8.5 seconds as it raised ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 6.248451982s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '6s'}]}}.
+2026-03-28 18:29:02 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:29:02 | INFO    | google_genai._api_client | Retrying google.genai._api_client.BaseApiClient._request_once in 16.1 seconds as it raised ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 56.857360147s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56s'}]}}.
+2026-03-28 18:29:19 | INFO    | httpx              | HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-03-28 18:29:19 | ERROR   | WeatherAgent       | [WEATHER] failed: Error calling model 'gemini-2.0-flash' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 40.06530141s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '40s'}]}}
+Traceback (most recent call last):
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_google_genai\chat_models.py", line 3047, in _generate
+    response: GenerateContentResponse = self.client.models.generate_content(
+                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        **request,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\models.py", line 5864, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config
+    )
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\models.py", line 4526, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\_api_client.py", line 1402, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\_api_client.py", line 1236, in _request
+    return retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\himan\AppData\Local\Python\pythoncore-3.14-64\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\himan\AppData\Local\Python\pythoncore-3.14-64\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\_api_client.py", line 1215, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\errors.py", line 134, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\google\genai\errors.py", line 159, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 40.06530141s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '40s'}]}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\agents\base_agent.py", line 63, in run
+    risk_score, reason, confidence = self.compute_risk(processed)
+                                     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\agents\weather_agent.py", line 80, in compute_risk
+    response = chain.invoke({
+        "condition": processed["condition"],
+    ...<4 lines>...
+        "city": processed["city"]
+    })
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_core\runnables\base.py", line 3157, in invoke
+    input_ = context.run(step.invoke, input_, config)
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_google_genai\chat_models.py", line 2535, in invoke
+    return super().invoke(input, config, stop=stop, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 454, in invoke
+    self.generate_prompt(
+    ~~~~~~~~~~~~~~~~~~~~^
+        [self._convert_input(input)],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    ).generations[0][0],
+    ^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 1201, in generate_prompt
+    return self.generate(prompt_messages, stop=stop, callbacks=callbacks, **kwargs)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 1010, in generate
+    self._generate_with_cache(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        m,
+        ^^
+    ...<2 lines>...
+        **kwargs,
+        ^^^^^^^^^
+    )
+    ^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_core\language_models\chat_models.py", line 1313, in _generate_with_cache
+    result = self._generate(
+        messages, stop=stop, run_manager=run_manager, **kwargs
+    )
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_google_genai\chat_models.py", line 3051, in _generate
+    _handle_client_error(e, request)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\SRM_Schrodinger-s-cat\backend\AIAgent\.venv\Lib\site-packages\langchain_google_genai\chat_models.py", line 145, in _handle_client_error
+    raise ChatGoogleGenerativeAIError(msg) from e
+langchain_google_genai.chat_models.ChatGoogleGenerativeAIError: Error calling model 'gemini-2.0-flash' (RESOURCE_EXHAUSTED): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash\nPlease retry in 40.06530141s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_input_token_count', 'quotaId': 'GenerateContentInputTokensPerModelPerMinute-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-2.0-flash'}}, {'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-2.0-flash', 'location': 'global'}}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '40s'}]}}
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   [DEMAND] risk=20, weight=0.1
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   [NEWS] risk=100, weight=0.3
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   [SUPPLIER] risk=17.8, weight=0.1
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   [TRAFFIC] risk=65.6, weight=0.2
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   [WEATHER] risk=30, weight=0.3
+2026-03-28 18:29:19 | INFO    | utils.risk_utils   |   Final aggregated risk: 55.9 (HIGH)
+2026-03-28 18:29:19 | INFO    | main               | Step 1 done 42.8s | risk=55.9 [HIGH]
+2026-03-28 18:29:19 | INFO    | main               | STEP 2 — Ripple Engine Simulation
+2026-03-28 18:29:19 | INFO    | simulation.monte_carlo | Running 100 Monte Carlo simulations...
+2026-03-28 18:29:19 | INFO    | simulation.monte_carlo | Simulation complete — expected_delay=5.919d, avg_impact=17.752, critical_node=port_destination
+2026-03-28 18:29:19 | INFO    | main               | Step 2 done 0.0s | delay=5.919d  prob=98%
+2026-03-28 18:29:19 | INFO    | main               | STEP 3 — Game Theory Route Selection
+2026-03-28 18:29:19 | INFO    | decision.route_graph | Route graph built: 6 nodes, 9 edges
+2026-03-28 18:29:19 | INFO    | decision.game_theory.game_solver | GAME THEORY | Mumbai → Rotterdam
+2026-03-28 18:29:19 | INFO    | decision.game_theory.scenario_generator | Scenarios: normal(0.00), storm(0.60), conflict(0.40)
+2026-03-28 18:29:19 | INFO    | decision.game_theory.game_solver | GT robust=Mumbai → Dubai → Rotterdam  expected=Mumbai → Dubai → Rotterdam  conf=0.0
+2026-03-28 18:29:19 | INFO    | main               | Step 3 done 0.0s | robust=['Mumbai', 'Dubai', 'Rotterdam']  conf=0.0
+2026-03-28 18:29:19 | INFO    | main               | STEP 4 — Decision Engine
+2026-03-28 18:29:19 | INFO    | decision.decision_engine | ============================================================
+2026-03-28 18:29:19 | INFO    | decision.decision_engine |   DECISION ENGINE
+2026-03-28 18:29:19 | INFO    | decision.decision_engine |   Route  : Mumbai → Rotterdam
+2026-03-28 18:29:19 | INFO    | decision.decision_engine | ============================================================
+2026-03-28 18:29:19 | INFO    | decision.route_graph | Route graph built: 6 nodes, 9 edges
+2026-03-28 18:29:19 | INFO    | decision.optimizer | Optimizer.run() | source=Mumbai | dest=Rotterdam | method=dijkstra
+2026-03-28 18:29:19 | INFO    | decision.optimizer | Dijkstra path: Mumbai → Dubai → Rotterdam | score=0.4547
+2026-03-28 18:29:19 | INFO    | decision.qubo_optimizer | QUBO | 5 routes to evaluate  (Mumbai → Rotterdam)
+2026-03-28 18:29:19 | INFO    | decision.qubo_optimizer | QUBO optimal: Mumbai → Dubai → Rotterdam  energy=-9.3242  gap=0.1018  solvers_agree=False
+2026-03-28 18:29:19 | INFO    | main               | Step 4 done 0.0s | best=['Mumbai', 'Dubai', 'Rotterdam']  conf=0.0
+2026-03-28 18:29:19 | INFO    | main               | STEP 5 — Economic Impact Analysis
+2026-03-28 18:29:19 | INFO    | economic.economic_engine | Economic multiplier: 2.0
+2026-03-28 18:29:19 | INFO    | main               | Step 5 done 0.0s | cost_rise=100.0%

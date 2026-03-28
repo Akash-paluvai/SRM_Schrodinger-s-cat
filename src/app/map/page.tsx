@@ -7,9 +7,10 @@ import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
 import { MetricCard, StatusBadge } from '@/components/ui';
 import { useAppStore } from '@/lib/store';
+import { CheckCircle } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
-   DYNAMIC IMPORTS (no SSR for Leaflet)
+   DYNAMIC IMPORTS (no SSR for Leaflet / Mapbox)
    ═══════════════════════════════════════════════════════ */
 const OldLeafletMap = dynamic(() => import('../../components/LeafletMap') as any, { ssr: false }) as any;
 const EnhancedMap = dynamic(() => import('../../components/EnhancedMap') as any, { ssr: false }) as any;
@@ -72,6 +73,7 @@ const ROUTE_TYPES = [
 export default function MapPage() {
   const router = useRouter();
   const shipment = useAppStore((s) => s.shipment);
+  const shipmentDbId = useAppStore((s) => s.shipmentDbId);
 
   /* ── Map mode toggle ── */
   const [mapMode, setMapMode] = useState<'enhanced' | 'old'>('enhanced');
@@ -82,6 +84,10 @@ export default function MapPage() {
   const [showRiskZones, setShowRiskZones] = useState(true);
   const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
   const [aiMode, setAiMode] = useState(false);
+
+  /* ── DB save state (Himanadh) ── */
+  const [saving, setSaving] = useState(false);
+  const [savedRoute, setSavedRoute] = useState<string | null>(null);
 
   /* ── Old map state ── */
   const [oldData, setOldData] = useState<OldMapData | null>(null);
@@ -128,12 +134,43 @@ export default function MapPage() {
     }
   }, [aiMode, enhancedData]);
 
+  /* ── Derived state ── */
   const currentEnhancedRoute = enhancedData?.routes[activeRoute] || null;
   const currentOldRoute = oldData?.routes[activeRoute] || null;
   const isEnhanced = mapMode === 'enhanced';
-  const data = isEnhanced ? enhancedData : oldData;
+  const currentRoute = isEnhanced ? currentEnhancedRoute : currentOldRoute;
 
-  if (!data && isEnhanced && !enhancedData) {
+  /* ── Save selected route to DB (Himanadh) ── */
+  const saveRoute = useCallback(async () => {
+    if (!shipmentDbId || !currentRoute) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/shipments/${shipmentDbId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'route_selection',
+          data: {
+            selectedRouteType: activeRoute,
+            label: currentRoute.label,
+            distance: currentRoute.distance,
+            time: currentRoute.time,
+            cost: currentRoute.cost,
+            riskScore: currentRoute.riskScore,
+            riskLevel: currentRoute.riskLevel,
+            reasoning: currentRoute.reasoning,
+            aiAutoSelected: aiMode,
+            savedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      setSavedRoute(activeRoute);
+    } finally {
+      setSaving(false);
+    }
+  }, [shipmentDbId, currentRoute, activeRoute, aiMode]);
+
+  if (!enhancedData && isEnhanced) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-14 pb-14">
         <div className="text-text-muted text-sm font-mono animate-pulse">Initializing global map...</div>
@@ -272,7 +309,7 @@ export default function MapPage() {
         </motion.div>
 
         {/* ── ROUTE DETAIL PANEL (right side) ── */}
-        {(isEnhanced ? currentEnhancedRoute : currentOldRoute) && (
+        {currentRoute && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -280,7 +317,7 @@ export default function MapPage() {
           >
             <GlassPanel className="p-4">
               {(() => {
-                const route = isEnhanced ? currentEnhancedRoute! : currentOldRoute!;
+                const route = currentRoute;
                 const src = isEnhanced ? enhancedData!.source : oldData!.source;
                 const dst = isEnhanced ? enhancedData!.destination : oldData!.destination;
                 const stp = isEnhanced ? enhancedData!.stops : oldData!.stops;
@@ -294,7 +331,7 @@ export default function MapPage() {
 
                     <div className="text-sm font-heading font-bold text-text-primary mb-1">{route.label}</div>
                     <div className="text-[10px] text-text-muted mb-3">
-                      {src.name} → {stp.map((s) => s.name).join(' → ')}{stp.length > 0 ? ' → ' : ''}{dst.name}
+                      {src.name} → {stp.map((s: Waypoint) => s.name).join(' → ')}{stp.length > 0 ? ' → ' : ''}{dst.name}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 mb-3">
@@ -309,7 +346,7 @@ export default function MapPage() {
                       <div className="mb-3">
                         <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Segments</div>
                         <div className="space-y-1">
-                          {currentEnhancedRoute.segments.map((seg, i) => (
+                          {currentEnhancedRoute.segments.map((seg: RouteSegment, i: number) => (
                             <div key={i} className="flex items-center justify-between text-[10px] px-2 py-1.5 rounded bg-white/[0.02] border border-white/[0.04]">
                               <div className="flex items-center gap-1.5">
                                 <span>{seg.mode === 'road' ? '🛣️' : seg.mode === 'air' ? '✈️' : '🚢'}</span>
@@ -331,13 +368,34 @@ export default function MapPage() {
                     {isEnhanced && currentEnhancedRoute?.riskFactors && currentEnhancedRoute.riskFactors.length > 0 && (
                       <div className="mb-3">
                         <div className="text-[10px] uppercase tracking-widest text-text-muted mb-1">Risk Factors</div>
-                        {currentEnhancedRoute.riskFactors.map((f, i) => (
+                        {currentEnhancedRoute.riskFactors.map((f: string, i: number) => (
                           <div key={i} className="flex items-center gap-1.5 text-[10px] text-risk-medium">
                             <span className="w-1 h-1 rounded-full bg-risk-medium" />
                             {f}
                           </div>
                         ))}
                       </div>
+                    )}
+
+                    {/* Save route to DB (Himanadh) */}
+                    {shipmentDbId && (
+                      <button
+                        onClick={saveRoute}
+                        disabled={saving || savedRoute === activeRoute}
+                        className={`w-full mb-2 py-2 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+                          savedRoute === activeRoute
+                            ? 'border-risk-low/30 bg-risk-low/8 text-risk-low cursor-default'
+                            : 'border-neon-cyan/25 bg-neon-cyan/5 text-neon-cyan hover:bg-neon-cyan/12 hover:border-neon-cyan/40'
+                        }`}
+                      >
+                        {saving ? (
+                          <><span className="w-3 h-3 border border-neon-cyan/40 border-t-neon-cyan rounded-full animate-spin" /> Saving…</>
+                        ) : savedRoute === activeRoute ? (
+                          <><CheckCircle size={11} /> Route Saved</>
+                        ) : (
+                          '💾 Save Route Selection'
+                        )}
+                      </button>
                     )}
 
                     {/* System integration */}
