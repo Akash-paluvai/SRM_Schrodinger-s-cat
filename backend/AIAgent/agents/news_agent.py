@@ -60,12 +60,24 @@ class NewsAgent(BaseAgent):
 
         overall_sentiment = max(sentiment_counts, key=sentiment_counts.get)
 
+        # Store top 5 headlines and their sources for frontend display
+        headlines = []
+        sources   = []
+        for a in articles[:6]:
+            title  = (a.get("title") or "").strip()
+            source = (a.get("source") or {}).get("name", "")
+            if title and title.lower() != "[removed]":
+                headlines.append(title)
+                sources.append(source)
+
         return {
-            "article_count": len(articles),
-            "sentiments": sentiments,
+            "article_count":    len(articles),
+            "sentiments":       sentiments,
             "overall_sentiment": overall_sentiment,
-            "risk_keywords": list(set(risk_keywords_found)),
-            "keyword_count": len(risk_keywords_found),
+            "risk_keywords":    list(set(risk_keywords_found)),
+            "keyword_count":    len(risk_keywords_found),
+            "headlines":        headlines[:5],
+            "sources":          sources[:5],
         }
 
     def compute_risk(self, processed: dict) -> tuple[float, str, float]:

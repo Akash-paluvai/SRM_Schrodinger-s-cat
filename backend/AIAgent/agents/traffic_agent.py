@@ -69,9 +69,27 @@ class TrafficAgent(BaseAgent):
         predicted_risk = self.model.predict(np.array([[ratio]]))[0]
         risk_score = max(0, min(100, predicted_risk))
 
+        pct = round(ratio * 100)
+        delay_factor = round(
+            (processed["current_travel_time"] / max(processed["free_flow_travel_time"], 1) - 1) * 100
+        ) if processed.get("free_flow_travel_time") else 0
+
+        if ratio > 0.6:
+            headline = (f"Heavy congestion — traffic at {processed['current_speed']} km/h "
+                        f"({pct}% below free-flow). Significant port access delays expected.")
+        elif ratio > 0.3:
+            headline = (f"Moderate congestion — {pct}% below free-flow speed. "
+                        f"Minor delays possible on approach routes.")
+        else:
+            headline = (f"Traffic flowing at {processed['current_speed']} km/h. "
+                        f"Port access conditions normal.")
+
+        processed["headline"] = headline
+
         reason = (
-            f"ML-predicted risk: {risk_score:.1f} based on congestion ratio {ratio} "
-            f"(speed {processed['current_speed']}/{processed['free_flow_speed']} km/h)"
+            f"ML-predicted risk: {risk_score:.1f} | congestion {pct}% "
+            f"(speed {processed['current_speed']}/{processed['free_flow_speed']} km/h, "
+            f"travel time +{delay_factor}% vs free-flow)"
         )
         confidence = 0.85
         return risk_score, reason, confidence

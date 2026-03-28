@@ -3,7 +3,10 @@
     "allow": [
       "Bash(python -c \"from fastapi_app import app\")",
       "Bash(.venv/Scripts/pip install:*)",
-      "Bash(.venv/Scripts/python -m pip install fastapi \"uvicorn[standard]\" motor pymongo pydantic python-dotenv python-multipart)"
+      "Bash(.venv/Scripts/python -m pip install fastapi \"uvicorn[standard]\" motor pymongo pydantic python-dotenv python-multipart)",
+      "Bash(ls c:SRM_Schrodinger-s-cat/*.config*)",
+      "Bash(ls c:SRM_Schrodinger-s-cat/*.config.ts)",
+      "Bash(find c:/SRM_Schrodinger-s-cat -maxdepth 2 -name *.config.*)"
     ]
   }
 }

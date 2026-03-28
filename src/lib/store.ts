@@ -51,6 +51,10 @@ interface AppStore {
   shipmentDbId: string | null;
   setShipmentDbId: (id: string) => void;
   clearShipmentDbId: () => void;
+
+  /** IDs of shipments selected for multi-shipment map comparison */
+  selectedShipmentIds: string[];
+  setSelectedShipmentIds: (ids: string[]) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -65,4 +69,7 @@ export const useAppStore = create<AppStore>((set) => ({
   shipmentDbId: null,
   setShipmentDbId: (id) => set({ shipmentDbId: id }),
   clearShipmentDbId: () => set({ shipmentDbId: null }),
+
+  selectedShipmentIds: [],
+  setSelectedShipmentIds: (ids) => set({ selectedShipmentIds: ids }),
 }));

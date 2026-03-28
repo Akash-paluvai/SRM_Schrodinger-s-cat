@@ -62,6 +62,7 @@ class BaseAgent(ABC):
             processed = self.process(data)
             risk_score, reason, confidence = self.compute_risk(processed)
             result = self.format_output(risk_score, reason, confidence)
+            result["raw_data"] = processed   # expose processed fields to frontend
 
             self.logger.info(
                 f"Agent [{self.name.upper()}] complete — risk={risk_score}"

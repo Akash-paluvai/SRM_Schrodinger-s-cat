@@ -7,13 +7,15 @@ import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
 import { MetricCard, StatusBadge } from '@/components/ui';
 import { useAppStore } from '@/lib/store';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Layers } from 'lucide-react';
+import type { ShipmentMapEntry } from '@/components/MultiShipmentMap';
 
 /* ═══════════════════════════════════════════════════════
    DYNAMIC IMPORTS (no SSR for Leaflet / Mapbox)
    ═══════════════════════════════════════════════════════ */
 const OldLeafletMap = dynamic(() => import('../../components/LeafletMap') as any, { ssr: false }) as any;
 const EnhancedMap = dynamic(() => import('../../components/EnhancedMap') as any, { ssr: false }) as any;
+const MultiShipmentMap = dynamic(() => import('../../components/MultiShipmentMap'), { ssr: false });
 
 /* ═══════════════════════════════════════════════════════
    TYPES (Enhanced)
@@ -67,6 +69,8 @@ const ROUTE_TYPES = [
   { key: 'safest' as const, label: '🛡️ Safest', color: '#A78BFA' },
 ];
 
+const SHIPMENT_COLORS = ['#00F0FF', '#EF4444', '#22C55E', '#F59E0B', '#A78BFA', '#FB923C'];
+
 /* ═══════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════ */
@@ -74,6 +78,8 @@ export default function MapPage() {
   const router = useRouter();
   const shipment = useAppStore((s) => s.shipment);
   const shipmentDbId = useAppStore((s) => s.shipmentDbId);
+  const selectedShipmentIds = useAppStore((s) => s.selectedShipmentIds);
+  const isMultiMode = selectedShipmentIds.length > 1;
 
   /* ── Map mode toggle ── */
   const [mapMode, setMapMode] = useState<'enhanced' | 'old'>('enhanced');
@@ -84,6 +90,10 @@ export default function MapPage() {
   const [showRiskZones, setShowRiskZones] = useState(true);
   const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
   const [aiMode, setAiMode] = useState(false);
+
+  /* ── Multi-shipment state ── */
+  const [multiEntries, setMultiEntries] = useState<ShipmentMapEntry[]>([]);
+  const [multiLoading, setMultiLoading] = useState(false);
 
   /* ── DB save state (Himanadh) ── */
   const [saving, setSaving] = useState(false);
@@ -123,6 +133,49 @@ export default function MapPage() {
       .then((r) => r.json())
       .then(setOldData);
   }, [mapMode, oldData, shipment]);
+
+  /* ── Multi-shipment data fetch ── */
+  useEffect(() => {
+    if (!isMultiMode) return;
+    setMultiLoading(true);
+
+    const fetchEntry = async (id: string, colorIdx: number): Promise<ShipmentMapEntry | null> => {
+      try {
+        // 1. Get shipment doc from DB
+        const docRes = await fetch(`/api/shipments/${id}`);
+        if (!docRes.ok) return null;
+        const doc = await docRes.json();
+
+        const src = doc.sourceLocation || 'Mumbai';
+        const dst = doc.destinationLocation || 'Dubai';
+        const mode = doc.transportMode || 'sea';
+        const stops = (doc.stops ?? []).map((s: { location?: string }) => s.location).filter(Boolean).join(',');
+
+        // 2. Fetch enhanced map data
+        const params = new URLSearchParams({ source: src, destination: dst, mode });
+        if (stops) params.set('stops', stops);
+        const mapRes = await fetch(`/api/enhanced-map-data?${params}`);
+        if (!mapRes.ok) return null;
+        const mapData = await mapRes.json();
+
+        return {
+          id,
+          color: SHIPMENT_COLORS[colorIdx % SHIPMENT_COLORS.length],
+          source: mapData.source,
+          destination: mapData.destination,
+          stops: mapData.stops ?? [],
+          route: mapData.routes?.fastest ?? null,
+          riskZones: mapData.riskZones ?? [],
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    Promise.all(selectedShipmentIds.map((id, i) => fetchEntry(id, i)))
+      .then((results) => setMultiEntries(results.filter(Boolean) as ShipmentMapEntry[]))
+      .finally(() => setMultiLoading(false));
+  }, [isMultiMode, selectedShipmentIds]);
 
   /* ── AI auto-select ── */
   useEffect(() => {
@@ -170,11 +223,131 @@ export default function MapPage() {
     }
   }, [shipmentDbId, currentRoute, activeRoute, aiMode]);
 
-  if (!enhancedData && isEnhanced) {
+  if (!enhancedData && isEnhanced && !isMultiMode) {
     return (
       <div className="min-h-screen flex items-center justify-center pt-14 pb-14">
         <div className="text-text-muted text-sm font-mono animate-pulse">Initializing global map...</div>
       </div>
+    );
+  }
+
+  /* ── Multi-shipment mode ── */
+  if (isMultiMode) {
+    return (
+      <main className="min-h-screen pt-14 pb-14 relative">
+        <div className="w-full h-[calc(100vh-112px)] relative overflow-hidden">
+
+          {/* Map */}
+          {multiLoading ? (
+            <div className="w-full h-full flex items-center justify-center bg-[#0a0e1a]">
+              <div className="text-text-muted text-sm font-mono animate-pulse">Loading {selectedShipmentIds.length} shipments…</div>
+            </div>
+          ) : (
+            <MultiShipmentMap shipments={multiEntries} />
+          )}
+
+          {/* Header badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000]"
+          >
+            <div className="glass flex items-center gap-2 px-4 py-2 rounded-lg">
+              <Layers size={12} className="text-neon-cyan" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-neon-cyan">
+                Multi-Shipment View — {multiEntries.length} Routes
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Comparison legend panel (right side) */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute top-4 right-4 z-[1000] w-72 max-h-[calc(100vh-160px)] overflow-y-auto"
+          >
+            <GlassPanel className="p-4">
+              <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-4">Shipment Comparison</div>
+              <div className="space-y-3">
+                {multiEntries.map((entry) => {
+                  const r = entry.route;
+                  return (
+                    <div
+                      key={entry.id}
+                      className="rounded-lg border p-3"
+                      style={{ borderColor: `${entry.color}33`, background: `${entry.color}08` }}
+                    >
+                      {/* Color stripe + ID */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color, boxShadow: `0 0 6px ${entry.color}88` }} />
+                        <span className="text-[10px] font-mono font-bold" style={{ color: entry.color }}>
+                          {entry.id.startsWith('mock-') ? `SH-${entry.id.slice(5)}` : entry.id.slice(-6).toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Route */}
+                      <div className="text-xs font-medium text-text-primary mb-2 truncate">
+                        {entry.source.name} → {entry.destination.name}
+                      </div>
+                      {/* Metrics grid */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { label: 'Distance', value: r?.distance ?? '—' },
+                          { label: 'Time', value: r?.time ?? '—' },
+                          { label: 'Cost', value: r?.cost ?? '—' },
+                          { label: 'Risk', value: r ? `${r.riskScore}/100` : '—' },
+                        ].map(({ label, value }) => (
+                          <div key={label} className="rounded px-2 py-1.5 bg-white/[0.03] border border-white/[0.04]">
+                            <div className="text-[8px] uppercase tracking-wider text-text-muted mb-0.5">{label}</div>
+                            <div className="text-[11px] font-mono font-semibold" style={{ color: entry.color }}>{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Stops */}
+                      {entry.stops.length > 0 && (
+                        <div className="mt-1.5 text-[9px] text-text-muted">
+                          via {entry.stops.map((s) => s.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => router.back()}
+                className="mt-4 w-full py-2 rounded-lg border border-white/10 text-[10px] text-text-muted hover:text-text-primary hover:border-white/20 transition-all cursor-pointer"
+              >
+                ← Back
+              </button>
+            </GlassPanel>
+          </motion.div>
+
+          {/* Bottom status */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="absolute bottom-4 left-4 right-4 z-[1000]"
+          >
+            <div className="glass flex items-center justify-between px-4 py-2.5 rounded-xl">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-risk-low animate-pulse" />
+                  <span className="text-[10px] font-mono text-text-muted">LIVE</span>
+                </div>
+                <span className="text-[10px] text-text-muted">
+                  Multi-Shipment: <span className="font-mono text-neon-cyan">{multiEntries.length} active</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {multiEntries.map((e) => (
+                  <div key={e.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: e.color }} />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </main>
     );
   }
 

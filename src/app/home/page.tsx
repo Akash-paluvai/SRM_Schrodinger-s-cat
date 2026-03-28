@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import GlassPanel from '@/components/GlassPanel';
 import { MetricCard, SectionLabel } from '@/components/ui';
 import { useAppStore, ShipmentPayload, ShipmentStop } from '@/lib/store';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Map } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
    STABLE INPUT COMPONENTS (outside the parent component)
@@ -188,12 +188,14 @@ export default function HomePage() {
   const router = useRouter();
   const setShipment    = useAppStore((s) => s.setShipment);
   const setShipmentDbId = useAppStore((s) => s.setShipmentDbId);
+  const setSelectedShipmentIds = useAppStore((s) => s.setSelectedShipmentIds);
   const [data, setData] = useState<DashboardData | null>(null);
   const [form, setForm] = useState<ShipmentPayload>({ ...defaultForm });
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'create'>('dashboard');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch('/api/home-data').then((r) => r.json()).then(setData);
@@ -237,6 +239,23 @@ export default function HomePage() {
   const onPrioritySelect = useCallback((v: string) => updateField('priority', v as 'low' | 'medium' | 'high'), [updateField]);
   const onRiskSelect = useCallback((v: string) => updateField('riskTolerance', v as 'low' | 'medium' | 'high'), [updateField]);
   const onDistributionSelect = useCallback((v: string) => updateField('distributionStrategy', v), [updateField]);
+
+  /* ── Toggle shipment selection ── */
+  const toggleCheck = useCallback((id: string) => {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  /* ── View selected on map ── */
+  const viewOnMap = useCallback(() => {
+    const ids = Array.from(checkedIds);
+    if (ids.length === 0) return;
+    setSelectedShipmentIds(ids);
+    router.push('/map');
+  }, [checkedIds, setSelectedShipmentIds, router]);
 
   /* ── Delete shipment ── */
   const handleDelete = useCallback(async (id: string) => {
@@ -363,11 +382,38 @@ export default function HomePage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2">
                   <GlassPanel className="p-5">
-                    <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-4">Recent Shipments</div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold">Recent Shipments</div>
+                      {checkedIds.size > 0 && (
+                        <button
+                          onClick={viewOnMap}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neon-cyan/30 bg-neon-cyan/8 text-neon-cyan text-[10px] font-semibold uppercase tracking-wider cursor-pointer hover:bg-neon-cyan/15 transition-all"
+                        >
+                          <Map size={11} />
+                          View {checkedIds.size} on Map
+                        </button>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       {data.recentShipments.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] transition-colors group">
+                        <div
+                          key={s.id}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-colors group cursor-pointer ${
+                            checkedIds.has(s.id)
+                              ? 'border-neon-blue/25 bg-neon-blue/5'
+                              : 'border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02]'
+                          }`}
+                          onClick={() => toggleCheck(s.id)}
+                        >
                           <div className="flex items-center gap-3 min-w-0">
+                            {/* Checkbox */}
+                            <div className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-all ${
+                              checkedIds.has(s.id)
+                                ? 'border-neon-blue bg-neon-blue/20'
+                                : 'border-white/20 bg-transparent'
+                            }`}>
+                              {checkedIds.has(s.id) && <span className="text-neon-blue text-[8px] font-bold">✓</span>}
+                            </div>
                             <span className="font-mono text-[10px] text-text-muted w-16 flex-shrink-0">{s.displayId ?? s.id}</span>
                             <div className="min-w-0">
                               <div className="text-xs font-medium text-text-primary truncate">{s.route}</div>
@@ -380,7 +426,7 @@ export default function HomePage() {
                               <div className="text-[10px] text-text-muted font-mono">ETA {s.eta}</div>
                             </div>
                             <button
-                              onClick={() => handleDelete(s.id)}
+                              onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
                               disabled={deletingId === s.id}
                               title="Delete shipment"
                               className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-risk-high hover:bg-risk-high/10 transition-all cursor-pointer disabled:opacity-30"
@@ -393,6 +439,11 @@ export default function HomePage() {
                         </div>
                       ))}
                     </div>
+                    {data.recentShipments.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/5 text-[9px] text-text-muted">
+                        Click rows to select • {checkedIds.size === 0 ? 'No shipments selected' : `${checkedIds.size} selected`}
+                      </div>
+                    )}
                   </GlassPanel>
                 </div>
 
