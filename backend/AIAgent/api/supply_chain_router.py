@@ -211,9 +211,11 @@ async def get_dashboard(
 
     recent = []
     for doc in recent_raw:
+        order_id = doc.get("orderId") or f"SH-{doc['_id'][-4:].upper()}"
         recent.append({
             "id":     doc["_id"],
-            "displayId": f"SH-{doc['_id'][-4:].upper()}",
+            "orderId": order_id,
+            "displayId": order_id,
             "route":  f"{doc.get('sourceLocation', '?')} → {doc.get('destinationLocation', '?')}",
             "status": status_display.get(doc.get("status", "created"), "IN_TRANSIT"),
             "mode":   doc.get("transportMode", "Sea"),
@@ -233,3 +235,54 @@ async def get_dashboard(
         },
         "recentShipments": recent,
     }
+
+
+# ── BACKFILL ORDER IDS ────────────────────────────────────────────────────────
+
+@router.post(
+    "/backfill-order-ids",
+    summary="Assign CM-XXXXXX orderId to all documents missing one",
+)
+async def backfill_order_ids(
+    repo: SupplyChainRepository = Depends(get_repo),
+) -> Dict[str, Any]:
+    """
+    Find all documents where orderId is null/missing and assign a unique
+    CM-XXXXXX ID to each one.
+    """
+    import random
+
+    cursor = repo._col.find(
+        {"$or": [{"orderId": None}, {"orderId": {"$exists": False}}, {"orderId": ""}]},
+    )
+    docs = await cursor.to_list(length=1000)
+
+    if not docs:
+        return {"message": "All documents already have orderId.", "updated": 0}
+
+    # Collect existing orderIds to avoid collisions
+    existing_cursor = repo._col.find(
+        {"orderId": {"$exists": True, "$ne": None, "$ne": ""}},
+        {"orderId": 1},
+    )
+    existing = {d["orderId"] async for d in existing_cursor}
+
+    updated = 0
+    for doc in docs:
+        # Generate unique orderId
+        for _ in range(20):
+            candidate = f"CM-{random.randint(100000, 999999)}"
+            if candidate not in existing:
+                break
+        else:
+            candidate = f"CM-{random.randint(100000, 999999)}-{updated}"
+
+        await repo._col.update_one(
+            {"_id": doc["_id"]},
+            {"$set": {"orderId": candidate}},
+        )
+        existing.add(candidate)
+        updated += 1
+
+    return {"message": f"Backfilled {updated} documents with orderId.", "updated": updated}
+

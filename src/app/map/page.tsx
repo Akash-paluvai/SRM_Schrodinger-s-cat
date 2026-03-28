@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import GlassPanel from '@/components/GlassPanel';
@@ -89,6 +89,22 @@ export default function MapPage() {
   const [saving, setSaving] = useState(false);
   const [savedRoute, setSavedRoute] = useState<string | null>(null);
 
+  /* ── Shipment tracking from URL ── */
+  const searchParams = useSearchParams();
+  const urlOrderId = searchParams.get('orderId');
+  const urlShipmentId = searchParams.get('shipmentId');
+  const [intelData, setIntelData] = useState<{
+    _id: string;
+    orderId: string | null;
+    sourceLocation: string;
+    destinationLocation: string;
+    status: string;
+    transportMode: string | null;
+    insights: { type: string; data: Record<string, unknown> };
+    trackingHistory: { location: string; timestamp: string; status: string; notes: string }[];
+    currentLocation: { lat: number; lng: number } | null;
+  } | null>(null);
+
   /* ── Old map state ── */
   const [oldData, setOldData] = useState<OldMapData | null>(null);
 
@@ -102,11 +118,31 @@ export default function MapPage() {
       if (shipment.stops.length > 0) {
         params.set('stops', shipment.stops.map((s) => s.location).filter(Boolean).join(','));
       }
+    } else if (intelData) {
+      /* Use intelligence data for map when no zustand state */
+      params.set('source', intelData.sourceLocation || 'Mumbai');
+      params.set('destination', intelData.destinationLocation || 'Dubai');
+      params.set('mode', intelData.transportMode || 'sea');
     }
     fetch(`/api/enhanced-map-data?${params.toString()}`)
       .then((r) => r.json())
       .then(setEnhancedData);
-  }, [shipment]);
+  }, [shipment, intelData]);
+
+  /* ── Fetch intelligence when URL has orderId or shipmentId ── */
+  useEffect(() => {
+    let url: string | null = null;
+    if (urlOrderId) {
+      url = `/api/intelligence-live?orderId=${encodeURIComponent(urlOrderId)}`;
+    } else if (urlShipmentId) {
+      url = `/api/intelligence-live?id=${urlShipmentId}`;
+    }
+    if (!url) return;
+    fetch(url)
+      .then((r) => { if (r.ok) return r.json(); return null; })
+      .then((d) => { if (d) setIntelData(d); })
+      .catch(() => {});
+  }, [urlOrderId, urlShipmentId]);
 
   /* ── Fetch old map data (lazy) ── */
   useEffect(() => {
@@ -477,6 +513,80 @@ export default function MapPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* ── TRACKING INFO PANEL (shows when navigated via shipmentId) ── */}
+        {intelData && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute bottom-20 left-4 z-[1000] w-72"
+          >
+            <GlassPanel className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold">Shipment Tracking</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-risk-low animate-pulse" />
+                  <span className="text-[9px] font-mono text-text-muted">LIVE</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Order ID</span>
+                  <span className="text-neon-cyan font-mono font-bold">{intelData.orderId || intelData._id.slice(-8).toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Status</span>
+                  <span className={`font-bold uppercase text-[10px] tracking-wider ${
+                    intelData.status === 'completed' ? 'text-risk-low' : intelData.status === 'failed' ? 'text-risk-high' : 'text-neon-blue'
+                  }`}>{intelData.status}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Route</span>
+                  <span className="text-text-primary font-mono text-[10px]">{intelData.sourceLocation?.split(',')[0]} → {intelData.destinationLocation?.split(',')[0]}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Risk Score</span>
+                  <span className={`font-bold font-mono ${
+                    ((intelData.insights?.data as Record<string, unknown>)?.riskScore as number ?? 0) >= 60 ? 'text-risk-high' :
+                    ((intelData.insights?.data as Record<string, unknown>)?.riskScore as number ?? 0) >= 30 ? 'text-risk-medium' : 'text-risk-low'
+                  }`}>
+                    {String((intelData.insights?.data as Record<string, unknown>)?.riskScore ?? '—')}/100
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Mode</span>
+                  <span className="text-text-primary">{intelData.transportMode || 'Auto'}</span>
+                </div>
+              </div>
+
+              {/* Tracking history timeline */}
+              {intelData.trackingHistory.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Tracking History</div>
+                  <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                    {intelData.trackingHistory.map((entry, i) => (
+                      <div key={i} className="flex items-start gap-2 text-[10px]">
+                        <span className="w-1 h-1 rounded-full bg-neon-blue mt-1.5 flex-shrink-0" />
+                        <div>
+                          <span className="text-text-secondary">{entry.status}</span>
+                          <span className="text-text-muted ml-1">· {entry.notes}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => router.push(`/intelligence?id=${intelData._id}`)}
+                className="w-full py-2 rounded-lg border border-neon-blue/20 bg-neon-blue/5 text-neon-blue text-[10px] font-semibold uppercase tracking-wider cursor-pointer hover:bg-neon-blue/10 transition-all text-center"
+              >
+                View Full Intelligence →
+              </button>
+            </GlassPanel>
+          </motion.div>
+        )}
       </div>
     </main>
   );

@@ -155,6 +155,50 @@ class Insights(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class GeoLocation(BaseModel):
+    """GPS coordinates for shipment tracking."""
+    lat: float = Field(..., examples=[19.076])
+    lng: float = Field(..., examples=[72.8777])
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class TrackingEntry(BaseModel):
+    """A single entry in the shipment tracking history."""
+    location:  str      = Field(..., examples=["Mumbai Port"])
+    timestamp: datetime  = Field(default_factory=datetime.utcnow)
+    status:    str      = Field(default="in_transit", examples=["in_transit"])
+    notes:     Optional[str] = Field(default=None, examples=["Cleared customs"])
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class AgentDataStore(BaseModel):
+    """
+    Per-agent output store.
+    Each agent writes ONLY to its own key; raw outputs are preserved.
+    """
+    weather:  Dict[str, Any] = Field(default_factory=dict)
+    traffic:  Dict[str, Any] = Field(default_factory=dict)
+    demand:   Dict[str, Any] = Field(default_factory=dict)
+    news:     Dict[str, Any] = Field(default_factory=dict)
+    supplier: Dict[str, Any] = Field(default_factory=dict)
+    risk:     Dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class SystemState(BaseModel):
+    """Routing and simulation state for the shipment."""
+    active_route:      Optional[str] = Field(None, alias="activeRoute")
+    selected_mode:     Optional[str] = Field(None, alias="selectedMode")
+    last_updated:      Optional[datetime] = Field(None, alias="lastUpdated")
+    simulation_status: Optional[str] = Field(None, alias="simulationStatus")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+
 # ─────────────────────────────────────────────
 # Main document model
 # ─────────────────────────────────────────────
@@ -201,13 +245,25 @@ class SupplyChainRequestDocument(BaseModel):
     compliance_requirements: List[str]       = Field(default_factory=list, alias="complianceRequirements")
     time_windows:            List[TimeWindow] = Field(default_factory=list, alias="timeWindows")
 
-    # ── G. AI Insights ───────────────────────────────────────────────────────
+    # ── G. AI Insights ───────────────────────────────────────────────────
     insights: Insights = Field(default_factory=Insights)
 
-    # ── H. System Metadata ───────────────────────────────────────────────────
+    # ── H. System Metadata ───────────────────────────────────────────────
     status:     StatusEnum = Field(default=StatusEnum.created)
     created_at: datetime   = Field(default_factory=datetime.utcnow, alias="createdAt")
     updated_at: Optional[datetime] = Field(None, alias="updatedAt")
+
+    # ── I. Order Tracking (NEW — optional, non-breaking) ────────────────
+    order_id:             Optional[str]              = Field(None, alias="orderId")
+    custom_shipment_type: Optional[str]              = Field(None, alias="customShipmentType")
+    current_location:     Optional[GeoLocation]      = Field(None, alias="currentLocation")
+    tracking_history:     List[TrackingEntry]         = Field(default_factory=list, alias="trackingHistory")
+
+    # ── J. Agent Data Layer (NEW — optional, non-breaking) ──────────────
+    agent_data:           Optional[AgentDataStore]    = Field(None, alias="agentData")
+
+    # ── K. System State (NEW — optional, non-breaking) ──────────────────
+    system_state:         Optional[SystemState]       = Field(None, alias="systemState")
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -260,8 +316,16 @@ class SupplyChainRequestCreate(BaseModel):
     compliance_requirements: List[str]       = Field(default_factory=list, alias="complianceRequirements")
     time_windows:            List[TimeWindow] = Field(default_factory=list, alias="timeWindows")
 
-    # ── G. AI Insights (optional at creation) ────────────────────────────────
+    # ── G. AI Insights (optional at creation) ────────────────────────────
     insights: Insights = Field(default_factory=Insights)
+
+    # ── H. Order Tracking (NEW — optional) ──────────────────────────────
+    order_id:             Optional[str]              = Field(None, alias="orderId")
+    custom_shipment_type: Optional[str]              = Field(None, alias="customShipmentType")
+    current_location:     Optional[GeoLocation]      = Field(None, alias="currentLocation")
+    tracking_history:     List[TrackingEntry]         = Field(default_factory=list, alias="trackingHistory")
+    agent_data:           Optional[AgentDataStore]    = Field(None, alias="agentData")
+    system_state:         Optional[SystemState]       = Field(None, alias="systemState")
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
@@ -289,5 +353,13 @@ class SupplyChainRequestUpdate(BaseModel):
     time_windows:            Optional[List[TimeWindow]]                 = Field(None, alias="timeWindows")
     insights:                Optional[Insights]                         = None
     status:                  Optional[StatusEnum]                       = None
+
+    # ── NEW — optional update fields ────────────────────────────────────
+    order_id:                Optional[str]                              = Field(None, alias="orderId")
+    custom_shipment_type:    Optional[str]                              = Field(None, alias="customShipmentType")
+    current_location:        Optional[GeoLocation]                      = Field(None, alias="currentLocation")
+    tracking_history:        Optional[List[TrackingEntry]]              = Field(None, alias="trackingHistory")
+    agent_data:              Optional[AgentDataStore]                   = Field(None, alias="agentData")
+    system_state:            Optional[SystemState]                      = Field(None, alias="systemState")
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)

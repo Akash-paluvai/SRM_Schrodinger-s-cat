@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
     if (faRes.ok) {
       const faJson = await faRes.json();
       dbId = faJson.id ?? null;
+
+      /* ── Auto-trigger agent pipeline (fire-and-forget) ── */
+      if (dbId) {
+        fetch(`${API_BASE}/intelligence/${dbId}/run`, { method: 'POST' }).catch(
+          (err) => console.error('[shipment API] Agent trigger failed:', err),
+        );
+      }
     } else {
       const errText = await faRes.text();
       console.error('[shipment API] FastAPI error:', faRes.status, errText);

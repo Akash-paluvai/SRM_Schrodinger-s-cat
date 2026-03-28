@@ -119,7 +119,8 @@ const StopInput = memo(function StopInput({
    ═══════════════════════════════════════════════════════ */
 interface RecentShipment {
   id: string;           // MongoDB _id (or mock-* for fallback)
-  displayId: string;    // e.g. SH-4821
+  orderId?: string;     // CM-XXXXXX order ID
+  displayId: string;    // orderId or fallback SH-XXXX
   route: string;
   status: string;
   mode: string;
@@ -194,6 +195,9 @@ export default function HomePage() {
   const [errors, setErrors] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'dashboard' | 'create'>('dashboard');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [trackOrderId, setTrackOrderId] = useState('');
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackError, setTrackError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/home-data').then((r) => r.json()).then(setData);
@@ -251,6 +255,26 @@ export default function HomePage() {
       );
     } finally {
       setDeletingId(null);
+    }
+  }, []);
+
+  /* ── Track shipment by Order ID ── */
+  const handleTrack = useCallback(async () => {
+    if (!trackOrderId.trim()) return;
+    setTrackLoading(true);
+    setTrackError(null);
+    try {
+      const res = await fetch(`/api/intelligence-live?orderId=${encodeURIComponent(trackOrderId.trim())}`);
+      if (res.ok) {
+        const intel = await res.json();
+        router.push(`/map?shipmentId=${intel._id}`);
+      } else {
+        setTrackError('Shipment not found. Check the Order ID.');
+      }
+    } catch {
+      setTrackError('Backend unreachable.');
+    } finally {
+      setTrackLoading(false);
     }
   }, []);
 
@@ -347,6 +371,36 @@ export default function HomePage() {
                 <MetricCard label="AI Confidence" value={`${data.extra.aiConfidence}%`} color="text-risk-low" />
               </div>
 
+              {/* ── TRACK SHIPMENT SECTION ── */}
+              <GlassPanel className="p-5">
+                <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-3">🔍 Track Shipment</div>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={trackOrderId}
+                    onChange={(e) => setTrackOrderId(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleTrack()}
+                    placeholder="Enter Order ID (e.g. ORD-TEST-001)"
+                    className={inputClass}
+                  />
+                  <button
+                    onClick={handleTrack}
+                    disabled={trackLoading || !trackOrderId.trim()}
+                    className="px-6 py-3 rounded-lg border border-neon-cyan/25 bg-neon-cyan/5 text-neon-cyan text-xs font-semibold uppercase tracking-wider cursor-pointer hover:bg-neon-cyan/12 hover:border-neon-cyan/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    {trackLoading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-3 h-3 border border-neon-cyan/40 border-t-neon-cyan rounded-full animate-spin" />
+                        Tracking...
+                      </span>
+                    ) : '📍 Track'}
+                  </button>
+                </div>
+                {trackError && (
+                  <div className="mt-2 text-xs text-risk-high">{trackError}</div>
+                )}
+              </GlassPanel>
+
               {/* Revenue banner */}
               <GlassPanel className="p-4 flex items-center justify-between">
                 <div>
@@ -366,9 +420,19 @@ export default function HomePage() {
                     <div className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-4">Recent Shipments</div>
                     <div className="space-y-2">
                       {data.recentShipments.map((s) => (
-                        <div key={s.id} className="flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] transition-colors group">
+                        <div
+                          key={s.id}
+                          onClick={() => {
+                            if (s.id.startsWith('mock-')) return;
+                            const trackParam = s.orderId || s.id;
+                            router.push(`/map?orderId=${encodeURIComponent(trackParam)}`);
+                          }}
+                          className={`flex items-center justify-between p-3 rounded-lg border border-white/[0.04] bg-white/[0.01] hover:bg-white/[0.02] transition-colors group ${!s.id.startsWith('mock-') ? 'cursor-pointer' : ''}`}
+                        >
                           <div className="flex items-center gap-3 min-w-0">
-                            <span className="font-mono text-[10px] text-text-muted w-16 flex-shrink-0">{s.displayId ?? s.id}</span>
+                            <span className="font-mono text-[10px] px-2 py-1 rounded border border-neon-cyan/20 bg-neon-cyan/5 text-neon-cyan font-bold tracking-wider shadow-[0_0_8px_rgba(0,240,255,0.1)] flex-shrink-0">
+                              {s.orderId || s.displayId}
+                            </span>
                             <div className="min-w-0">
                               <div className="text-xs font-medium text-text-primary truncate">{s.route}</div>
                               <div className="text-[10px] text-text-muted">{s.cargo} • {s.mode}</div>
@@ -380,7 +444,7 @@ export default function HomePage() {
                               <div className="text-[10px] text-text-muted font-mono">ETA {s.eta}</div>
                             </div>
                             <button
-                              onClick={() => handleDelete(s.id)}
+                              onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
                               disabled={deletingId === s.id}
                               title="Delete shipment"
                               className="opacity-0 group-hover:opacity-100 w-7 h-7 flex items-center justify-center rounded-lg text-text-muted hover:text-risk-high hover:bg-risk-high/10 transition-all cursor-pointer disabled:opacity-30"

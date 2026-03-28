@@ -22,6 +22,7 @@ Usage
 from __future__ import annotations
 
 from datetime import datetime
+import random
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
@@ -52,18 +53,41 @@ class SupplyChainRepository:
             doc["_id"] = str(doc["_id"])
         return doc
 
+    @staticmethod
+    def _generate_order_id() -> str:
+        """Generate a unique CM-XXXXXX order ID."""
+        return f"CM-{random.randint(100000, 999999)}"
+
+    async def ensure_order_id_index(self) -> None:
+        """Create a unique sparse index on orderId (idempotent)."""
+        await self._col.create_index(
+            "orderId", unique=True, sparse=True, name="orderId_unique",
+        )
+
     # ── CREATE ────────────────────────────────────────────────────────────────
 
     async def create(self, payload: SupplyChainRequestCreate) -> str:
         """
         Insert a new SupplyChainRequest document.
         Injects system metadata (status, createdAt) before insertion.
+        Auto-generates orderId if not provided.
         Returns the new document's _id as a string.
         """
         doc = self._to_dict(payload)
         doc.setdefault("status", StatusEnum.created.value)
         doc["createdAt"] = datetime.utcnow()
         doc["updatedAt"] = doc["createdAt"]
+
+        # Auto-generate orderId if missing
+        if not doc.get("orderId"):
+            for _ in range(10):  # retry up to 10 times for uniqueness
+                candidate = self._generate_order_id()
+                exists = await self._col.find_one({"orderId": candidate})
+                if not exists:
+                    doc["orderId"] = candidate
+                    break
+            else:
+                doc["orderId"] = f"CM-{random.randint(100000, 999999)}-{int(datetime.utcnow().timestamp()) % 10000}"
 
         result = await self._col.insert_one(doc)
         return str(result.inserted_id)
@@ -173,3 +197,68 @@ class SupplyChainRepository:
         if status:
             query["status"] = status
         return await self._col.count_documents(query)
+
+    # ── AGENT DATA (per-agent atomic write) ───────────────────────────────────
+
+    async def patch_agent_data(
+        self,
+        doc_id: str,
+        agent_name: str,
+        data: Dict[str, Any],
+    ) -> bool:
+        """Atomically write a single agent's output into agentData.<name>."""
+        if not ObjectId.is_valid(doc_id):
+            return False
+
+        result = await self._col.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {
+                f"agentData.{agent_name}": data,
+                "updatedAt": datetime.utcnow(),
+            }},
+        )
+        return result.modified_count > 0
+
+    # ── SYSTEM STATE ──────────────────────────────────────────────────────────
+
+    async def patch_system_state(
+        self,
+        doc_id: str,
+        state: Dict[str, Any],
+    ) -> bool:
+        """Replace the systemState sub-document."""
+        if not ObjectId.is_valid(doc_id):
+            return False
+
+        result = await self._col.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {"systemState": state, "updatedAt": datetime.utcnow()}},
+        )
+        return result.modified_count > 0
+
+    # ── TRACKING HISTORY ──────────────────────────────────────────────────────
+
+    async def append_tracking(
+        self,
+        doc_id: str,
+        entry: Dict[str, Any],
+    ) -> bool:
+        """Append a tracking entry to the trackingHistory array."""
+        if not ObjectId.is_valid(doc_id):
+            return False
+
+        result = await self._col.update_one(
+            {"_id": ObjectId(doc_id)},
+            {
+                "$push": {"trackingHistory": entry},
+                "$set":  {"updatedAt": datetime.utcnow()},
+            },
+        )
+        return result.modified_count > 0
+
+    # ── LOOKUP BY ORDER ID ────────────────────────────────────────────────────
+
+    async def get_by_order_id(self, order_id: str) -> Optional[Dict[str, Any]]:
+        """Find a single document by its orderId field."""
+        doc = await self._col.find_one({"orderId": order_id})
+        return self._serialize(doc) if doc else None
