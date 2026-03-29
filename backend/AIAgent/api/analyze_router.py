@@ -156,6 +156,8 @@ async def analyze_route(payload: AnalyzeRequest) -> Dict[str, Any]:
 
         # Step 3 — game theory
         G = build_graph(
+            source=payload.source,
+            destination=payload.destination,
             route_options=DEFAULT_ROUTE_OPTIONS,
             agent_results=agent_report.get("agents", []),
             simulation_output=simulation_report,

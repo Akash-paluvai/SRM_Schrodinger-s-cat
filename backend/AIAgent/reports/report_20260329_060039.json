@@ -1,0 +1,582 @@
+{
+  "step1_risk_assessment": {
+    "agents": [
+      {
+        "agent": "demand",
+        "risk_score": 20,
+        "reason": "ML-forecasted max spike: -3.0% (forecasts: supply chain:43.9, shipping delay:0.3)",
+        "confidence": 0.75,
+        "timestamp": "2026-03-29T06:00:43.107640+00:00",
+        "raw_data": {
+          "spikes": {
+            "supply chain": -3.03,
+            "shipping delay": -26.48
+          },
+          "forecasts": {
+            "supply chain": 43.88416025092672,
+            "shipping delay": 0.33696891930424866
+          },
+          "max_spike": -3.03
+        }
+      },
+      {
+        "agent": "news",
+        "risk_score": 30.0,
+        "reason": "Data unavailable \u2014 fallback risk",
+        "confidence": 0.3,
+        "timestamp": "2026-03-29T06:00:41.530735+00:00"
+      },
+      {
+        "agent": "supplier",
+        "risk_score": 17.8,
+        "reason": "ML-predicted risk: 17.8 based on supplier data. Avg reliability: 0.809 across 10 suppliers. Worst: QuickPack Solutions (0.6)",
+        "confidence": 0.9,
+        "timestamp": "2026-03-29T06:00:41.564020+00:00",
+        "raw_data": {
+          "avg_reliability": 0.809,
+          "min_reliability": 0.6,
+          "supplier_count": 10,
+          "worst_supplier": {
+            "name": "QuickPack Solutions",
+            "reliability": 0.6
+          },
+          "predicted_risk": 17.8
+        }
+      },
+      {
+        "agent": "traffic",
+        "risk_score": 30.0,
+        "reason": "Data unavailable \u2014 fallback risk",
+        "confidence": 0.3,
+        "timestamp": "2026-03-29T06:00:41.532139+00:00"
+      },
+      {
+        "agent": "weather",
+        "risk_score": 30.0,
+        "reason": "Data unavailable \u2014 fallback risk",
+        "confidence": 0.3,
+        "timestamp": "2026-03-29T06:00:41.529723+00:00"
+      }
+    ],
+    "final_risk": 27.78,
+    "risk_level": "MODERATE",
+    "timestamp": "2026-03-29T06:00:43.110196+00:00",
+    "intelligence_state": {
+      "total_risk": 27.78,
+      "risk_breakdown": {
+        "demand": 20,
+        "news": 30.0,
+        "supplier": 17.8,
+        "traffic": 30.0,
+        "weather": 30.0
+      },
+      "trend": 0,
+      "volatility": 30.054,
+      "dominant_risk": "news",
+      "correlations": []
+    }
+  },
+  "step2_simulation": {
+    "expected_delay": 6.07,
+    "max_delay": 17.938,
+    "min_delay": 0.081,
+    "std_delay": 6.076,
+    "avg_impact_score": 18.482,
+    "max_impact_score": 29.131,
+    "most_critical_node": "port_origin",
+    "avg_nodes_impacted": 3.71,
+    "disruption_frequency": {
+      "port_origin": 22,
+      "customer": 10,
+      "supplier": 15,
+      "shipping": 21,
+      "warehouse": 19,
+      "port_destination": 13
+    },
+    "impact_level": "MODERATE",
+    "simulation_runs": 100,
+    "scenarios": [
+      {
+        "type": "normal",
+        "expected_delay": 5.58
+      },
+      {
+        "type": "storm",
+        "expected_delay": 8.38
+      },
+      {
+        "type": "conflict",
+        "expected_delay": 9.81
+      }
+    ],
+    "scenario_expected_delay": 7.92,
+    "p95_delay": 10.0,
+    "probability_severe": 0.67,
+    "sensitivity": {
+      "traffic+10%": 1.53,
+      "weather+20%": 1.67
+    },
+    "node_impacts": {
+      "supplier": 0.98,
+      "port_origin": 0.98,
+      "shipping": 0.98,
+      "port_destination": 0.98,
+      "warehouse": 0.98,
+      "customer": 0.98
+    },
+    "execution_time_ms": 6.0,
+    "timestamp": "2026-03-29T06:00:43.135569+00:00",
+    "worst_case_delay": 10.0,
+    "disruption_probability": 0.67,
+    "risk_level": "MODERATE"
+  },
+  "step3_game_theory": {
+    "robust_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "expected_optimal_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "risk_adjusted_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "confidence": 0.0,
+    "payoff_matrix": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "normal": -0.957001,
+        "storm": -1.427335,
+        "conflict": -1.565535
+      }
+    },
+    "route_costs": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "normal": 0.957001,
+        "storm": 1.427335,
+        "conflict": 1.565535
+      }
+    },
+    "scenarios": [
+      {
+        "name": "normal",
+        "probability": 0.528302,
+        "risk_mult": 1.0,
+        "delay_mult": 1.0,
+        "description": "Baseline \u2014 no major disruption"
+      },
+      {
+        "name": "storm",
+        "probability": 0.283019,
+        "risk_mult": 1.6,
+        "delay_mult": 2.0,
+        "description": "Severe weather event"
+      },
+      {
+        "name": "conflict",
+        "probability": 0.188679,
+        "risk_mult": 2.0,
+        "delay_mult": 1.8,
+        "description": "Geopolitical conflict or canal closure"
+      }
+    ],
+    "strategy_scores": {
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+        "worst_case_cost": 1.565535,
+        "expected_cost": 1.204932,
+        "risk_adjusted_score": 1.36444,
+        "variance": 0.101771
+      }
+    },
+    "dominated_removed": [
+      "Mumbai \u2192 Singapore \u2192 Rotterdam",
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam",
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam"
+    ],
+    "high_risk_removed": [],
+    "lambda_risk": 0.5,
+    "timestamp": "2026-03-29T06:00:43.139739+00:00"
+  },
+  "step4_decision": {
+    "best_route": [
+      "Mumbai",
+      "Dubai",
+      "Rotterdam"
+    ],
+    "total_distance": 7700.0,
+    "total_risk": 0.4467,
+    "total_delay": 0.2023,
+    "final_score": 0.328467,
+    "method_used": "dijkstra",
+    "reason": "Lowest combined cost under uncertainty (weighted: 50% distance, 30% risk, 20% delay)",
+    "edge_details": [
+      {
+        "from": "Mumbai",
+        "to": "Dubai",
+        "distance": 1900.0,
+        "risk": 0.24,
+        "delay": 0.1012,
+        "weight": 0.130233
+      },
+      {
+        "from": "Dubai",
+        "to": "Rotterdam",
+        "distance": 5800.0,
+        "risk": 0.2067,
+        "delay": 0.1012,
+        "weight": 0.198234
+      }
+    ],
+    "strategies": {
+      "safe_route": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 27.78,
+          "delay": 6.07
+        },
+        "score": 7009.548
+      },
+      "cost_optimal": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 27.78,
+          "delay": 6.07
+        },
+        "score": 7009.548
+      },
+      "balanced_route": {
+        "route": [
+          "Mumbai",
+          "Dubai",
+          "Rotterdam"
+        ],
+        "metrics": {
+          "distance": 14000,
+          "risk": 27.78,
+          "delay": 6.07
+        },
+        "score": 7009.548
+      },
+      "robust_route": [
+        "Mumbai",
+        "Dubai",
+        "Rotterdam"
+      ],
+      "qubo_route": [
+        "Mumbai",
+        "Dubai",
+        "Rotterdam"
+      ]
+    },
+    "qubo_result": {
+      "optimal_route": [
+        "Mumbai",
+        "Dubai",
+        "Rotterdam"
+      ],
+      "optimal_route_label": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+      "qubo_energy": -9.324201,
+      "feasible": true,
+      "solver_used": "exact_enumeration",
+      "sa_verification": {
+        "route": "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+        "energy": -9.207364,
+        "agrees": false
+      },
+      "optimality_report": {
+        "selected_route": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+        "qubo_energy": -9.324201,
+        "energy_gap_to_next": 0.116837,
+        "why_optimal": "Route 'Mumbai \u2192 Dubai \u2192 Rotterdam' achieves the lowest QUBO energy (-9.3242) among 5 candidates after encoding objective (50% distance, 30% risk, 20% delay) and penalty terms for 4 constraints. Next-best route has energy gap of 0.1168.",
+        "constraint_summary": {
+          "one_hot_selection": "always enforced",
+          "risk_threshold": "satisfied",
+          "sla_compliance": "satisfied",
+          "budget_limit": "satisfied"
+        },
+        "solvers_agree": false,
+        "solver_primary": "exact_enumeration",
+        "solver_verify": "simulated_annealing"
+      },
+      "route_energies": [
+        {
+          "rank": 1,
+          "route": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+          "path": [
+            "Mumbai",
+            "Dubai",
+            "Rotterdam"
+          ],
+          "qubo_energy": -9.324201,
+          "distance_km": 7700.0,
+          "risk_score": 22.33,
+          "delay_days": 6.07,
+          "selected": true,
+          "constraint_violations": {
+            "C2_risk": false,
+            "C3_sla": false,
+            "C4_budget": false
+          }
+        },
+        {
+          "rank": 2,
+          "route": "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+          "path": [
+            "Mumbai",
+            "Suez Canal",
+            "Rotterdam"
+          ],
+          "qubo_energy": -9.207364,
+          "distance_km": 13700.0,
+          "risk_score": 20.83,
+          "delay_days": 6.07,
+          "selected": false,
+          "constraint_violations": {
+            "C2_risk": false,
+            "C3_sla": false,
+            "C4_budget": false
+          }
+        },
+        {
+          "rank": 3,
+          "route": "Mumbai \u2192 Singapore \u2192 Rotterdam",
+          "path": [
+            "Mumbai",
+            "Singapore",
+            "Rotterdam"
+          ],
+          "qubo_energy": -9.155251,
+          "distance_km": 15100.0,
+          "risk_score": 22.33,
+          "delay_days": 6.07,
+          "selected": false,
+          "constraint_violations": {
+            "C2_risk": false,
+            "C3_sla": false,
+            "C4_budget": false
+          }
+        },
+        {
+          "rank": 4,
+          "route": "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam",
+          "path": [
+            "Mumbai",
+            "Singapore",
+            "Suez Canal",
+            "Rotterdam"
+          ],
+          "qubo_energy": -9.060765,
+          "distance_km": 19500.0,
+          "risk_score": 21.89,
+          "delay_days": 6.07,
+          "selected": false,
+          "constraint_violations": {
+            "C2_risk": false,
+            "C3_sla": false,
+            "C4_budget": false
+          }
+        },
+        {
+          "rank": 5,
+          "route": "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam",
+          "path": [
+            "Mumbai",
+            "Cape of Good Hope",
+            "Rotterdam"
+          ],
+          "qubo_energy": -9.020149,
+          "distance_km": 21900.0,
+          "risk_score": 20.83,
+          "delay_days": 6.07,
+          "selected": false,
+          "constraint_violations": {
+            "C2_risk": false,
+            "C3_sla": false,
+            "C4_budget": false
+          }
+        }
+      ],
+      "qubo_matrix": {
+        "Mumbai \u2192 Suez Canal \u2192 Rotterdam": {
+          "Mumbai \u2192 Suez Canal \u2192 Rotterdam": -9.207364,
+          "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+        },
+        "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": {
+          "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": -9.020149,
+          "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+        },
+        "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": {
+          "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": -9.060765,
+          "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+          "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+        },
+        "Mumbai \u2192 Singapore \u2192 Rotterdam": {
+          "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Singapore \u2192 Rotterdam": -9.155251,
+          "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+        },
+        "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+          "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Singapore \u2192 Rotterdam": 0.0,
+          "Mumbai \u2192 Dubai \u2192 Rotterdam": -9.324201
+        }
+      },
+      "constraints": [
+        {
+          "id": "C1",
+          "name": "one_hot_selection",
+          "type": "equality",
+          "formula": "\u03a3 x_i = 1",
+          "description": "Exactly one route must be selected",
+          "penalty_weight": 10.0,
+          "encoding": "Q[i][i] -= A  |  Q[i][j] += 2A  for all i\u2260j",
+          "status": "always enforced"
+        },
+        {
+          "id": "C2",
+          "name": "risk_threshold",
+          "type": "inequality",
+          "formula": "risk_i \u2264 80.0",
+          "description": "Route aggregated risk score must not exceed threshold",
+          "penalty_weight": 5.0,
+          "encoding": "Q[i][i] += B  if route i violates",
+          "violating_routes": [],
+          "status": "satisfied"
+        },
+        {
+          "id": "C3",
+          "name": "sla_compliance",
+          "type": "inequality",
+          "formula": "delay_i \u2264 30.0 days",
+          "description": "Expected delivery delay must be within SLA",
+          "penalty_weight": 8.0,
+          "encoding": "Q[i][i] += C  if route i violates",
+          "violating_routes": [],
+          "status": "satisfied"
+        },
+        {
+          "id": "C4",
+          "name": "budget_limit",
+          "type": "inequality",
+          "formula": "distance_i \u2264 25000 km",
+          "description": "Total route distance must be within budget",
+          "penalty_weight": 3.0,
+          "encoding": "Q[i][i] += D  if route i violates",
+          "violating_routes": [],
+          "status": "satisfied"
+        }
+      ],
+      "objective_weights": {
+        "distance": 0.5,
+        "risk": 0.3,
+        "delay": 0.2
+      },
+      "penalty_weights": {
+        "one_hot_selection": 10.0,
+        "risk_threshold": 5.0,
+        "sla_compliance": 8.0,
+        "budget_limit": 3.0
+      },
+      "thresholds": {
+        "max_risk_score": 80.0,
+        "sla_days": 30.0,
+        "budget_km": 25000
+      },
+      "normalisers": {
+        "max_distance_km": 21900.0,
+        "max_risk_score": 22.33,
+        "max_delay_days": 6.07
+      },
+      "n_routes_evaluated": 5,
+      "source": "Mumbai",
+      "destination": "Rotterdam",
+      "timestamp": "2026-03-29T06:00:43.191160+00:00"
+    },
+    "confidence": 0.0,
+    "rejected_routes": [],
+    "reasoning": "QUBO-optimal route selected via quantum-inspired binary optimization (objective: 50% distance + 30% risk + 20% delay, constraints: one-hot selection, risk \u2264 80, SLA \u2264 30d, budget \u2264 25000km)",
+    "execution_time_ms": 51.01,
+    "timestamp": "2026-03-29T06:00:43.191160+00:00"
+  },
+  "step5_economic": {
+    "routes": [
+      {
+        "route_id": "safe_route",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.28,
+          "currency": 1.1
+        }
+      },
+      {
+        "route_id": "cost_optimal",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.28,
+          "currency": 1.1
+        }
+      },
+      {
+        "route_id": "balanced_route",
+        "base_cost": 14000,
+        "adjusted_cost": 21000.0,
+        "economic_factors": {
+          "oil": 1.21,
+          "demand": 1.28,
+          "currency": 1.1
+        }
+      }
+    ],
+    "economic_summary": {
+      "oil_impact_percent": 21.43,
+      "demand_impact_percent": 27.78,
+      "total_cost_increase_percent": 70.68
+    },
+    "recommended_route": {
+      "route_id": "safe_route",
+      "base_cost": 14000,
+      "adjusted_cost": 21000.0,
+      "economic_factors": {
+        "oil": 1.21,
+        "demand": 1.28,
+        "currency": 1.1
+      }
+    },
+    "timestamp": "2026-03-29T06:00:43.194686+00:00"
+  },
+  "meta": {
+    "run_id": "20260329_060039",
+    "timestamp": "2026-03-29T06:00:39.675309+00:00"
+  }
+}

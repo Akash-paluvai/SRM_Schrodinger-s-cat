@@ -115,6 +115,8 @@ def _edge_delay(
 # Graph builder
 # ---------------------------------------------------------------------------
 def build_graph(
+    source: str | None = None,
+    destination: str | None = None,
     route_options: list[tuple[str, str, float]] | None = None,
     agent_results: list[dict] | None = None,
     simulation_output: dict | None = None,
@@ -134,6 +136,20 @@ def build_graph(
         nx.DiGraph with 'weight', 'distance', 'risk', 'delay' on each edge.
     """
     edges = route_options or DEFAULT_ROUTE_OPTIONS
+    edges = list(edges)  # copy to allow appending
+
+    # Dynamically inject synthetic edges if source/dest are outside standard topology
+    if source and destination:
+        existing_nodes = {u for u, v, _ in edges} | {v for u, v, _ in edges}
+        if source not in existing_nodes:
+            logger.info("Injecting dynamic source: %s", source)
+            edges.append((source, "Singapore", 3000.0))
+            edges.append((source, "Dubai", 2500.0))
+        if destination not in existing_nodes:
+            logger.info("Injecting dynamic destination: %s", destination)
+            edges.append(("Rotterdam", destination, 1000.0))
+            edges.append(("Dubai", destination, 3500.0))
+
     agent_risk = _extract_agent_risk(agent_results)
 
     G = nx.DiGraph()

@@ -1,6 +1,55 @@
 import { NextResponse } from 'next/server';
 
+import { API_BASE } from '@/lib/api';
+
 export async function GET() {
+  try {
+    const res = await fetch(`${API_BASE}/supply-chain-requests?limit=20`, { cache: 'no-store' });
+    if (res.ok) {
+        const json = await res.json();
+        const shipments = json.data || [];
+        const decisions = shipments.filter((s: any) => s.insights && s.insights.data).map((s: any, idx: number) => {
+            const data = s.insights.data;
+            const agents = data.agents || [];
+            
+            const weatherRisk = agents.find((a: any) => a.agent === 'weather')?.risk_score || 10;
+            const trafficRisk = agents.find((a: any) => a.agent === 'traffic')?.risk_score || 10;
+            const newsRisk = agents.find((a: any) => a.agent === 'news')?.risk_score || 10;
+            const demandRisk = agents.find((a: any) => a.agent === 'demand')?.risk_score || 10;
+            
+            return {
+                id: `DEC-${s._id.slice(-4).toUpperCase()}`,
+                action: `Optimal Route: ${data.source} → ${data.destination}`,
+                timestamp: data.run_at || s.createdAt || new Date().toISOString(),
+                status: 'EXECUTED',
+                factors: {
+                    weather: Math.round(weatherRisk),
+                    congestion: Math.round(trafficRisk),
+                    geopolitics: Math.round(newsRisk),
+                    demand: Math.round(demandRisk)
+                },
+                outcome: {
+                    delayReduction: 'Simulated',
+                    costReduction: data.economic_cost ? `$${data.economic_cost?.toLocaleString()} total` : 'Optimized',
+                    riskReduction: `Final Risk: ${Math.round(data.final_risk || 0)}/100`
+                },
+                reasoning: `AI selected this route based on game theory optimization. Dominant risk was ${data.dominant_risk}. Expected delay is ${data.expected_delay?.toFixed(1)} days. Worst case scenarios show a p95 delay of ${data.p95_delay?.toFixed(1)} days.`,
+                alternatives: [
+                    { action: 'Standard Ocean Route', risk: 'MEDIUM', delay: '+2.1 days', cost: '+$40K' },
+                    { action: 'Air Freight', risk: 'LOW', delay: '-5.0 days', cost: '+$350K' }
+                ]
+            };
+        });
+        
+        if (decisions.length > 0) {
+            return NextResponse.json({ decisions });
+        }
+    }
+  } catch (e) {
+    console.error("DB Explain Error", e);
+  }
+
+  // Fallback to static mock
   return NextResponse.json({
     decisions: [
       {

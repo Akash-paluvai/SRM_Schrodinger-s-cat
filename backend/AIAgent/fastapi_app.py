@@ -20,10 +20,11 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-load_dotenv()
+load_dotenv(override=True)
 
 from api.supply_chain_router import router as sc_router
 from api.analyze_router      import router as analyze_router
+from api.copilot_router      import router as copilot_router
 from db.connection import get_database
 
 logger = logging.getLogger("fastapi_app")
@@ -78,6 +79,7 @@ app.add_middleware(
 
 app.include_router(sc_router,      prefix="/api/v1", tags=["Supply Chain Requests"])
 app.include_router(analyze_router,  prefix="/api/v1", tags=["Agentic AI Pipeline"])
+app.include_router(copilot_router,  prefix="/api/v1", tags=["Copilot Chat"])
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

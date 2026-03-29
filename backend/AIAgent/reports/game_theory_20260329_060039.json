@@ -1,0 +1,81 @@
+{
+  "run_id": "20260329_060039",
+  "timestamp": "2026-03-29T06:00:39.675309+00:00",
+  "source": "Mumbai",
+  "destination": "Rotterdam",
+  "payoff_matrix": {
+    "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+      "normal": -0.957001,
+      "storm": -1.427335,
+      "conflict": -1.565535
+    }
+  },
+  "route_costs": {
+    "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+      "normal": 0.957001,
+      "storm": 1.427335,
+      "conflict": 1.565535
+    }
+  },
+  "scenarios": [
+    {
+      "name": "normal",
+      "probability": 0.528302,
+      "risk_mult": 1.0,
+      "delay_mult": 1.0,
+      "description": "Baseline \u2014 no major disruption"
+    },
+    {
+      "name": "storm",
+      "probability": 0.283019,
+      "risk_mult": 1.6,
+      "delay_mult": 2.0,
+      "description": "Severe weather event"
+    },
+    {
+      "name": "conflict",
+      "probability": 0.188679,
+      "risk_mult": 2.0,
+      "delay_mult": 1.8,
+      "description": "Geopolitical conflict or canal closure"
+    }
+  ],
+  "strategy_scores": {
+    "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+      "worst_case_cost": 1.565535,
+      "expected_cost": 1.204932,
+      "risk_adjusted_score": 1.36444,
+      "variance": 0.101771
+    }
+  },
+  "minimax_route": [
+    "Mumbai",
+    "Dubai",
+    "Rotterdam"
+  ],
+  "expected_optimal_route": [
+    "Mumbai",
+    "Dubai",
+    "Rotterdam"
+  ],
+  "risk_adjusted_route": [
+    "Mumbai",
+    "Dubai",
+    "Rotterdam"
+  ],
+  "confidence": 0.0,
+  "dominated_removed": [
+    "Mumbai \u2192 Singapore \u2192 Rotterdam",
+    "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+    "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam",
+    "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam"
+  ],
+  "high_risk_removed": [],
+  "lambda_risk": 0.5,
+  "summary": {
+    "total_routes_evaluated": 5,
+    "routes_surviving": 1,
+    "routes_dominated": 4,
+    "routes_high_risk": 0
+  }
+}

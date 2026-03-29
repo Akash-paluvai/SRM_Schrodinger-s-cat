@@ -1,6 +1,64 @@
 import { NextResponse } from 'next/server';
 
+import { API_BASE } from '@/lib/api';
+
 export async function GET() {
+  try {
+    const res = await fetch(`${API_BASE}/supply-chain-requests?limit=20`, { cache: 'no-store' });
+    if (res.ok) {
+        const json = await res.json();
+        const shipments = json.data || [];
+        const latestInfo = shipments.find((s: any) => s.insights && s.insights.data);
+        
+        if (latestInfo) {
+            const data = latestInfo.insights.data;
+            const route: string[] = data.optimal_route || [];
+            
+            if (route.length > 0) {
+                const nodes = [];
+                const edges = [];
+                let x = 10;
+                
+                for (let i = 0; i < route.length; i++) {
+                    const nodeName = route[i];
+                    nodes.push({
+                        id: `N${i}`,
+                        label: nodeName,
+                        type: i === 0 ? 'supplier' : i === route.length - 1 ? 'warehouse' : 'port',
+                        risk: data.risk_level?.toLowerCase() || 'medium',
+                        x: x,
+                        y: 30 + (i % 2 === 0 ? 10 : -10)
+                    });
+                    
+                    if (i > 0) {
+                        edges.push({
+                            from: `N${i-1}`,
+                            to: `N${i}`,
+                            risk: data.risk_level?.toLowerCase() || 'medium',
+                            flow: 4500
+                        });
+                    }
+                    x += Math.floor(80 / (route.length || 1));
+                }
+                
+                return NextResponse.json({
+                    nodes,
+                    edges,
+                    summary: {
+                        totalNodes: nodes.length,
+                        totalEdges: edges.length,
+                        highRiskPaths: data.risk_level === 'HIGH' ? edges.length : 0,
+                        avgFlow: 4500
+                    }
+                });
+            }
+        }
+    }
+  } catch (e) {
+    console.error("DB Graph Error", e);
+  }
+
+  // Fallback to static mock if DB fails or lacks insights
   return NextResponse.json({
     nodes: [
       { id: 'S1', label: 'Shanghai Port', type: 'port', risk: 'high', x: 80, y: 20 },

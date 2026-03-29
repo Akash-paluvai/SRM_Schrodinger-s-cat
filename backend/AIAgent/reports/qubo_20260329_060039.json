@@ -1,0 +1,242 @@
+{
+  "run_id": "20260329_060039",
+  "timestamp": "2026-03-29T06:00:39.675309+00:00",
+  "source": "Mumbai",
+  "destination": "Rotterdam",
+  "methodology": {
+    "name": "QUBO \u2014 Quadratic Unconstrained Binary Optimization",
+    "formulation": "minimize x^T Q x  where x \u2208 {0,1}^n",
+    "solver": "exact_enumeration",
+    "description": "Each binary variable x_i represents whether route i is chosen. The Q matrix encodes both the objective (weighted cost) and all constraint penalties. The solution x* with minimum energy is the optimal route."
+  },
+  "constraints_considered": [
+    {
+      "id": "C1",
+      "name": "one_hot_selection",
+      "type": "equality",
+      "formula": "\u03a3 x_i = 1",
+      "description": "Exactly one route must be selected",
+      "penalty_weight": 10.0,
+      "encoding": "Q[i][i] -= A  |  Q[i][j] += 2A  for all i\u2260j",
+      "status": "always enforced"
+    },
+    {
+      "id": "C2",
+      "name": "risk_threshold",
+      "type": "inequality",
+      "formula": "risk_i \u2264 80.0",
+      "description": "Route aggregated risk score must not exceed threshold",
+      "penalty_weight": 5.0,
+      "encoding": "Q[i][i] += B  if route i violates",
+      "violating_routes": [],
+      "status": "satisfied"
+    },
+    {
+      "id": "C3",
+      "name": "sla_compliance",
+      "type": "inequality",
+      "formula": "delay_i \u2264 30.0 days",
+      "description": "Expected delivery delay must be within SLA",
+      "penalty_weight": 8.0,
+      "encoding": "Q[i][i] += C  if route i violates",
+      "violating_routes": [],
+      "status": "satisfied"
+    },
+    {
+      "id": "C4",
+      "name": "budget_limit",
+      "type": "inequality",
+      "formula": "distance_i \u2264 25000 km",
+      "description": "Total route distance must be within budget",
+      "penalty_weight": 3.0,
+      "encoding": "Q[i][i] += D  if route i violates",
+      "violating_routes": [],
+      "status": "satisfied"
+    }
+  ],
+  "objective_weights": {
+    "distance": 0.5,
+    "risk": 0.3,
+    "delay": 0.2
+  },
+  "penalty_weights": {
+    "one_hot_selection": 10.0,
+    "risk_threshold": 5.0,
+    "sla_compliance": 8.0,
+    "budget_limit": 3.0
+  },
+  "thresholds": {
+    "max_risk_score": 80.0,
+    "sla_days": 30.0,
+    "budget_km": 25000
+  },
+  "normalisers": {
+    "max_distance_km": 21900.0,
+    "max_risk_score": 22.33,
+    "max_delay_days": 6.07
+  },
+  "n_routes_evaluated": 5,
+  "qubo_matrix": {
+    "Mumbai \u2192 Suez Canal \u2192 Rotterdam": {
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam": -9.207364,
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+    },
+    "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": {
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": -9.020149,
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+    },
+    "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": {
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": -9.060765,
+      "Mumbai \u2192 Singapore \u2192 Rotterdam": 20.0,
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+    },
+    "Mumbai \u2192 Singapore \u2192 Rotterdam": {
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Singapore \u2192 Rotterdam": -9.155251,
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": 20.0
+    },
+    "Mumbai \u2192 Dubai \u2192 Rotterdam": {
+      "Mumbai \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Singapore \u2192 Rotterdam": 0.0,
+      "Mumbai \u2192 Dubai \u2192 Rotterdam": -9.324201
+    }
+  },
+  "route_energies": [
+    {
+      "rank": 1,
+      "route": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+      "path": [
+        "Mumbai",
+        "Dubai",
+        "Rotterdam"
+      ],
+      "qubo_energy": -9.324201,
+      "distance_km": 7700.0,
+      "risk_score": 22.33,
+      "delay_days": 6.07,
+      "selected": true,
+      "constraint_violations": {
+        "C2_risk": false,
+        "C3_sla": false,
+        "C4_budget": false
+      }
+    },
+    {
+      "rank": 2,
+      "route": "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+      "path": [
+        "Mumbai",
+        "Suez Canal",
+        "Rotterdam"
+      ],
+      "qubo_energy": -9.207364,
+      "distance_km": 13700.0,
+      "risk_score": 20.83,
+      "delay_days": 6.07,
+      "selected": false,
+      "constraint_violations": {
+        "C2_risk": false,
+        "C3_sla": false,
+        "C4_budget": false
+      }
+    },
+    {
+      "rank": 3,
+      "route": "Mumbai \u2192 Singapore \u2192 Rotterdam",
+      "path": [
+        "Mumbai",
+        "Singapore",
+        "Rotterdam"
+      ],
+      "qubo_energy": -9.155251,
+      "distance_km": 15100.0,
+      "risk_score": 22.33,
+      "delay_days": 6.07,
+      "selected": false,
+      "constraint_violations": {
+        "C2_risk": false,
+        "C3_sla": false,
+        "C4_budget": false
+      }
+    },
+    {
+      "rank": 4,
+      "route": "Mumbai \u2192 Singapore \u2192 Suez Canal \u2192 Rotterdam",
+      "path": [
+        "Mumbai",
+        "Singapore",
+        "Suez Canal",
+        "Rotterdam"
+      ],
+      "qubo_energy": -9.060765,
+      "distance_km": 19500.0,
+      "risk_score": 21.89,
+      "delay_days": 6.07,
+      "selected": false,
+      "constraint_violations": {
+        "C2_risk": false,
+        "C3_sla": false,
+        "C4_budget": false
+      }
+    },
+    {
+      "rank": 5,
+      "route": "Mumbai \u2192 Cape of Good Hope \u2192 Rotterdam",
+      "path": [
+        "Mumbai",
+        "Cape of Good Hope",
+        "Rotterdam"
+      ],
+      "qubo_energy": -9.020149,
+      "distance_km": 21900.0,
+      "risk_score": 20.83,
+      "delay_days": 6.07,
+      "selected": false,
+      "constraint_violations": {
+        "C2_risk": false,
+        "C3_sla": false,
+        "C4_budget": false
+      }
+    }
+  ],
+  "optimal_route": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+  "optimal_path": [
+    "Mumbai",
+    "Dubai",
+    "Rotterdam"
+  ],
+  "qubo_energy": -9.324201,
+  "feasible": true,
+  "sa_verification": {
+    "route": "Mumbai \u2192 Suez Canal \u2192 Rotterdam",
+    "energy": -9.207364,
+    "agrees": false
+  },
+  "optimality_report": {
+    "selected_route": "Mumbai \u2192 Dubai \u2192 Rotterdam",
+    "qubo_energy": -9.324201,
+    "energy_gap_to_next": 0.116837,
+    "why_optimal": "Route 'Mumbai \u2192 Dubai \u2192 Rotterdam' achieves the lowest QUBO energy (-9.3242) among 5 candidates after encoding objective (50% distance, 30% risk, 20% delay) and penalty terms for 4 constraints. Next-best route has energy gap of 0.1168.",
+    "constraint_summary": {
+      "one_hot_selection": "always enforced",
+      "risk_threshold": "satisfied",
+      "sla_compliance": "satisfied",
+      "budget_limit": "satisfied"
+    },
+    "solvers_agree": false,
+    "solver_primary": "exact_enumeration",
+    "solver_verify": "simulated_annealing"
+  }
+}

@@ -31,7 +31,7 @@ export default function CopilotWidget() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/copilot", {
+      const res = await fetch("http://localhost:8000/api/v1/copilot", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SystemNav from "@/components/SystemNav";
+import CopilotWidget from "@/components/CopilotWidget";
 
 export const metadata: Metadata = {
   title: "ChainMind AI+ | AI Command Center",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="grid-bg">
         {children}
         <SystemNav />
+        <CopilotWidget />
       </body>
     </html>
   );

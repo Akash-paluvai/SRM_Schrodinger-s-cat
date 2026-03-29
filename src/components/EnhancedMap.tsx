@@ -64,8 +64,18 @@ export default function EnhancedMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    // STEP 2: Set token from env
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+    // STEP 2: Set token from env.
+    const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    
+    // Prevent the Next.js red error screen by safely stopping here if there's no real token
+    if (!token || token.includes('dummy')) {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;width:100%;background:rgba(11,15,26,0.9);color:#ff4444;font-family:sans-serif;font-size:20px;font-weight:600;text-align:center;padding:20px;line-height:1.5;">Map is disabled.<br/>Create a free account at mapbox.com<br/>Paste your token into .env.local</div>';
+      }
+      return;
+    }
+
+    mapboxgl.accessToken = token;
 
     const map = new mapboxgl.Map({
       container: containerRef.current,

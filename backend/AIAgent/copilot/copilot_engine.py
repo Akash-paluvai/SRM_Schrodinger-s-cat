@@ -64,10 +64,11 @@ Decision is based on simulated delay, aggregated risk, and route optimization ou
     prompt = f"""
 You are a Supply Chain AI Copilot.
 
-STRICT:
-- Only use given data
-- No assumptions
-- If missing → say "insufficient data"
+STRICT DOMAIN CONSTRAINTS:
+- You ONLY answer questions related to Supply Chain, Logistics, Trade, Routing, Risk, Weather, and Operations.
+- If the user asks a general knowledge question (e.g. "What is the capital of France?", "Write a poem", "Who won the World Cup?"), you MUST refuse and politely explain you are a dedicated Supply Chain AI.
+- Only use given data. If you lack data for a supply chain question, say "insufficient data".
+- No assumptions.
 
 MODE: {mode}
 
@@ -94,15 +95,27 @@ Reasoning:
         try:
             genai.configure(api_key=api_key)
 
-            # 🔥 USE MOST COMPATIBLE MODEL
-            model = genai.GenerativeModel("models/gemini-1.5-flash")
-
+            # Dynamically pull the exact models this API key / SDK version actually supports!
+            available_models = []
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    available_models.append(m.name)
+                    
+            if not available_models:
+                raise Exception("This Google API Key has no generateContent models enabled.")
+                
+            # Prefer 'flash' for speed, otherwise just grab the first valid text model
+            target_model = next((m for m in available_models if 'flash' in m.lower()), available_models[0])
+            
+            model = genai.GenerativeModel(target_model)
             response = model.generate_content(prompt)
 
             text = getattr(response, "text", None)
 
         except Exception as e:
             print("Gemini Error:", e)
+            avail = available_models if 'available_models' in locals() else 'Unknown'
+            text = f"LLM Connection Error: {str(e)}\n\n(Available: {avail})"
 
     # -----------------------------
     # 7. FINAL FALLBACK (NEVER FAIL)

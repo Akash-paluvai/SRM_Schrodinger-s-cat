@@ -69,6 +69,8 @@ export default function SimulationMap({ source, destination, stops = [], riskZon
         L.control.zoom({ position: 'bottomright' }).addTo(mapObj.current);
       }
 
+      if (!mapObj.current || !mounted) return;
+
       const map = mapObj.current!;
 
       /* ── Clear previous layers ── */
